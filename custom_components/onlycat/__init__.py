@@ -19,7 +19,11 @@ from .data import OnlyCatConfigEntry, OnlyCatData
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SELECT]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.SELECT,
+    Platform.DEVICE_TRACKER,
+]
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -35,6 +39,7 @@ async def async_setup_entry(
             session=async_get_clientsession(hass),
         ),
         devices=[],
+        pets={},
     )
     await entry.runtime_data.client.connect()
     for device in entry.data["devices"]:

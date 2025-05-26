@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from device_tracker import OnlyCatDeviceTrackerWrapper
     from homeassistant.config_entries import ConfigEntry
 
     from .api import OnlyCatApiClient
@@ -22,3 +23,5 @@ class OnlyCatData:
 
     client: OnlyCatApiClient
     devices: list
+    pets: dict
+    device_tracker: OnlyCatDeviceTrackerWrapper | None = None
