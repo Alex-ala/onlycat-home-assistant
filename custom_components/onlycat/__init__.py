@@ -40,18 +40,17 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
-    if "settings" not in entry.data:
-        entry.data["settings"] = {
-            "ignore_flap_motion_rules": False,
-            "ignore_motion_sensor_rules": False,
-        }
+    default_settings = {
+        "ignore_flap_motion_rules": False,
+        "ignore_motion_sensor_rules": False,
+    }
     entry.runtime_data = OnlyCatData(
         client=OnlyCatApiClient(
             token=entry.data["token"], session=async_get_clientsession(hass)
         ),
         devices=[],
         pets=[],
-        settings=entry.data["settings"],
+        settings=entry.data["settings"] if "settings" in entry.data else default_settings,
     )
     await entry.runtime_data.client.connect()
 
