@@ -6,12 +6,19 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, tzinfo
 from enum import Enum, StrEnum
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING
 
-from .event import Event, EventClassification, EventTriggerSource, EventFlapstate, EventMotionstate
+from .event import (
+    Event,
+    EventClassification,
+    EventFlapstate,
+    EventMotionstate,
+    EventTriggerSource,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
     from .device import Device
 
 _LOGGER = logging.getLogger(__name__)
@@ -231,7 +238,7 @@ class TransitPolicy:
         """Create a TransitPolicy instance from API response data."""
         if api_policy is None:
             return None
-
+        _LOGGER.debug("Creating TransitPolicy from API response: %s", api_policy)
         rules = api_policy.get("rules")
 
         return cls(
@@ -256,7 +263,7 @@ class DeviceTransitPolicy:
         """Create a DeviceTransitPolicy instance from API response data."""
         if api_policy is None or "deviceTransitPolicyId" not in api_policy:
             return None
-
+        _LOGGER.debug("Creating DeviceTransitPolicy from API response: %s", api_policy)
         return cls(
             device_transit_policy_id=api_policy["deviceTransitPolicyId"],
             device_id=api_policy["deviceId"],
@@ -269,6 +276,7 @@ class DeviceTransitPolicy:
     def determine_policy_result(self, event: Event) -> PolicyResult:
         """
         Determine the policy result for a given event.
+
         Mimics the OnlyCat flaps logic for evaluating transit policies.
         This means that the first matching rule determines the result.
         """
@@ -282,6 +290,16 @@ class DeviceTransitPolicy:
         if self.transit_policy.rules:
             for rule in self.transit_policy.rules:
                 if not rule.enabled:
+                    continue
+                if (
+                    self.device.settings["ignore_flap_motion_rules"]
+                    and rule.criteria.flap_states
+                ):
+                    continue
+                if (
+                    self.device.settings["ignore_motion_sensor_rules"]
+                    and rule.criteria.motion_sensor_states
+                ):
                     continue
                 if not rule.criteria or not rule.criteria.matches(
                     event, self.device.time_zone

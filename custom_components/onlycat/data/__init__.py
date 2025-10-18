@@ -27,3 +27,4 @@ class OnlyCatData:
     client: OnlyCatApiClient
     devices: list[Device]
     pets: list[Pet]
+    settings: dict[str, object]

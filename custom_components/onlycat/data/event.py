@@ -44,6 +44,7 @@ class EventClassification(Enum):
         _LOGGER.warning("Unknown event classification: %s", value)
         return cls.UNKNOWN
 
+
 class EventFlapstate(Enum):
     """Enum representing the flap state during an OnlyCat flap event."""
 
