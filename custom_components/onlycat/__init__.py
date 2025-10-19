@@ -162,7 +162,10 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
         )
         for rfid in rfids:
             rfid_code = rfid["rfidCode"]
-            last_seen = datetime.fromisoformat(rfid["timestamp"])
+            try:
+                last_seen = datetime.fromisoformat(rfid["timestamp"])
+            except TypeError:
+                last_seen = None
             rfid_profile = await entry.runtime_data.client.send_message(
                 "getRfidProfile", {"rfidCode": rfid_code}
             )

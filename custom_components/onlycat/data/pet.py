@@ -24,7 +24,7 @@ class Pet:
 
     device: Device
     rfid_code: str
-    last_seen: datetime
+    last_seen: datetime | None
     last_seen_event: Event | None = None
     label: str | None = None
 
