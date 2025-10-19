@@ -6,6 +6,13 @@
                 "data": {
                     "token": "OnlyCat Device Token"
                 }
+            },
+            "reconfigure": {
+                "description": "OnlyCat Integration neu konfigurieren - Einstellungen aktualisieren.",
+                "data": {
+                    "ignore_flap_motion_rules": "Ignoriere Regln für Klappenbewegungen",
+                    "ignore_motion_sensor_rules": "Ignoriere Regeln für Bewegungssensoren"
+                }
             }
         },
         "error": {

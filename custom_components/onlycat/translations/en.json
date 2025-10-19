@@ -6,6 +6,13 @@
                 "data": {
                     "token": "OnlyCat Device Token"
                 }
+            },
+            "reconfigure": {
+                "description": "Reconfigure OnlyCat integration. Update settings.",
+                "data": {
+                    "ignore_flap_motion_rules": "Ignore flap motion rules",
+                    "ignore_motion_sensor_rules": "Ignore motion sensor rules"
+                }
             }
         },
         "error": {
