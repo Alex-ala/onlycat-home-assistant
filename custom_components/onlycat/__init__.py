@@ -50,7 +50,7 @@ async def async_setup_entry(
         ),
         devices=[],
         pets=[],
-        settings=entry.data["settings"] if "settings" in entry.data else default_settings,
+        settings=entry.data.get("settings", default_settings)
     )
     await entry.runtime_data.client.connect()
 
