@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.components.image import ImageEntity, ImageEntityDescription
@@ -109,6 +109,8 @@ class OnlyCatLastImage(ImageEntity):
             self._current_event.device_id = event_update.device_id
             self._current_event.event_id = event_update.event_id
         self._current_event.update_from(event_update.event)
+        self._cached_image = None
+        self._current_event.timestamp += timedelta(seconds=1)
         frame_to_show = (
             self._current_event.poster_frame_index
             if self._current_event.poster_frame_index is not None
@@ -125,6 +127,11 @@ class OnlyCatLastImage(ImageEntity):
             + str(frame_to_show)
         )
         self._attr_image_last_updated = self._current_event.timestamp
+        _LOGGER.debug(
+            "Updated image URL %s: %s",
+            self._current_event.timestamp,
+            self._attr_image_url,
+        )
         self.async_write_ha_state()
 
     async def update_event(self, event: Event) -> None:
@@ -133,6 +140,7 @@ class OnlyCatLastImage(ImageEntity):
             "Updating event for device %s: %s", self.device.device_id, str(event)
         )
         self._current_event = event
+        self._cached_image = None
         frame_to_show = (
             self._current_event.poster_frame_index
             if self._current_event.poster_frame_index is not None
@@ -149,4 +157,9 @@ class OnlyCatLastImage(ImageEntity):
             + str(frame_to_show)
         )
         self._attr_image_last_updated = self._current_event.timestamp
+        _LOGGER.debug(
+            "Updated image URL for device %s: %s",
+            self._current_event.timestamp,
+            self._attr_image_url,
+        )
         self.async_write_ha_state()

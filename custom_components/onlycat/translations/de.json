@@ -56,6 +56,11 @@
             "onlycat_unlock_button": {
                 "name": "Aufschließen"
             }
+        },
+        "image": {
+            "onlycat_event_image": {
+                "name": "Letztes Bild"
+            }
         }
     }
 }
