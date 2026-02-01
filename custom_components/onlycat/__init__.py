@@ -30,7 +30,7 @@ PLATFORMS: list[Platform] = [
     Platform.SELECT,
     Platform.DEVICE_TRACKER,
     Platform.BUTTON,
-    Platform.IMAGE
+    Platform.IMAGE,
 ]
 _LOGGER = logging.getLogger(__name__)
 
