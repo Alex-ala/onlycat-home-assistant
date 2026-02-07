@@ -37,6 +37,9 @@
             },
             "onlycat_lock_sensor": {
                 "name": "Lock state"
+            },
+            "onlycat_error_sensor": {
+                "name": "Errors"
             }
         },
         "device_tracker": {

@@ -37,6 +37,9 @@
             },
             "onlycat_lock_sensor": {
                 "name": "Verriegelung"
+            },
+            "onlycat_error_sensor": {
+                "name": "Fehlermeldungen"
             }
         },
         "device_tracker": {
