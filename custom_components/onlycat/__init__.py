@@ -44,6 +44,7 @@ async def async_setup_entry(
     default_settings = {
         "ignore_flap_motion_rules": False,
         "ignore_motion_sensor_rules": False,
+        "poll_interval_hours": 6,
     }
     entry.runtime_data = OnlyCatData(
         client=OnlyCatApiClient(

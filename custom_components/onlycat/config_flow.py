@@ -19,6 +19,7 @@ from .api import (
 from .const import (
     CONF_IGNORE_FLAP_MOTION_RULES,
     CONF_IGNORE_MOTION_SENSOR_RULES,
+    CONF_POLL_INTERVAL_HOURS,
     DOMAIN,
     LOGGER,
 )
@@ -57,6 +58,9 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 ]
                 settings["ignore_motion_sensor_rules"] = user_input[
                     CONF_IGNORE_MOTION_SENSOR_RULES
+                ]
+                settings["poll_interval_hours"] = user_input[
+                    CONF_POLL_INTERVAL_HOURS
                 ]
                 client.add_event_listener("userUpdate", on_user_update)
                 await self._validate_connection(client)
@@ -109,6 +113,18 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_IGNORE_MOTION_SENSOR_RULES, False
                         ),
                     ): selector.BooleanSelector(),
+                    vol.Required(
+                        CONF_POLL_INTERVAL_HOURS,
+                        default=(user_input or {}).get(
+                            CONF_POLL_INTERVAL_HOURS, 6
+                        ),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=1,
+                            max=24,
+                            step=1,
+                        )
+                    ),
                 },
             ),
             errors=_errors,
@@ -125,6 +141,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         settings = {
             "ignore_flap_motion_rules": False,
             "ignore_motion_sensor_rules": False,
+            "poll_interval_hours": 6,
         }
         if user_input is not None and config_entry is not None:
             settings["ignore_flap_motion_rules"] = user_input[
@@ -132,6 +149,9 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             ]
             settings["ignore_motion_sensor_rules"] = user_input[
                 CONF_IGNORE_MOTION_SENSOR_RULES
+            ]
+            settings["poll_interval_hours"] = user_input[
+                CONF_POLL_INTERVAL_HOURS
             ]
             return self.async_update_reload_and_abort(
                 config_entry,
@@ -158,6 +178,18 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_IGNORE_MOTION_SENSOR_RULES, False
                         ),
                     ): selector.BooleanSelector(),
+                    vol.Required(
+                        CONF_POLL_INTERVAL_HOURS,
+                        default=(user_input or {}).get(
+                            CONF_POLL_INTERVAL_HOURS, 6
+                        ),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=1,
+                            max=24,
+                            step=1,
+                        )
+                    ),
                 },
             ),
             errors=errors,
