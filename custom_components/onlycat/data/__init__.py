@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
     from custom_components.onlycat.api import OnlyCatApiClient
+    from custom_components.onlycat.coordinator import OnlyCatDataUpdateCoordinator
 
     from .device import Device
     from .pet import Pet
@@ -28,3 +29,4 @@ class OnlyCatData:
     devices: list[Device]
     pets: list[Pet]
     settings: dict[str, object]
+    coordinator: OnlyCatDataUpdateCoordinator

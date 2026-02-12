@@ -10,7 +10,9 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 
@@ -18,6 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .api import OnlyCatApiClient
+    from .coordinator import OnlyCatDataUpdateCoordinator
     from .data.device import Device
 
 ENTITY_DESCRIPTION = BinarySensorEntityDescription(
@@ -28,11 +31,10 @@ ENTITY_DESCRIPTION = BinarySensorEntityDescription(
 )
 
 
-class OnlyCatErrorSensor(BinarySensorEntity):
+class OnlyCatErrorSensor(CoordinatorEntity, BinarySensorEntity):
     """OnlyCat Error Sensor class."""
 
     _attr_has_entity_name = True
-    _attr_should_poll = False
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -45,10 +47,13 @@ class OnlyCatErrorSensor(BinarySensorEntity):
 
     def __init__(
         self,
+        coordinator: OnlyCatDataUpdateCoordinator,
         device: Device,
         api_client: OnlyCatApiClient,
     ) -> None:
         """Initialize the sensor class."""
+        CoordinatorEntity.__init__(self, coordinator, device.device_id)
+        self.coordinator = coordinator
         self.entity_description = ENTITY_DESCRIPTION
         self._attr_is_on = False
         self._attr_extra_state_attributes = {}
@@ -57,20 +62,15 @@ class OnlyCatErrorSensor(BinarySensorEntity):
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_errors"
         self._api_client = api_client
         self.entity_id = "sensor." + self._attr_unique_id
-        self.should_poll = True
 
-
-    async def async_update(self) -> None:
-        """Handle update."""
-
-        errors = await self._api_client.send_message(
-            "getDeviceErrorLogs", {
-                "deviceId": self.device.device_id,
-                "limit": 100,
-                "hours": self.device.settings["poll_interval_hours"],
-                "measureName": "message"
-                })
-        self._attr_is_on = len(errors) > 0
-        self._attr_extra_state_attributes = {"errors": errors}
-        self.async_write_ha_state()
-
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        _LOGGER.debug(self.coordinator.data)
+        self._attr_is_on = (
+            len(self.coordinator.data[self.device.device_id]["errors"]) > 0
+        )
+        self._attr_extra_state_attributes = {
+            "errors": self.coordinator.data[self.device.device_id]["errors"]
+        }
+        self.async_schedule_update_ha_state()

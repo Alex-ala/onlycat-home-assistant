@@ -17,6 +17,7 @@ from .api import (
     OnlyCatApiClientError,
 )
 from .const import (
+    CONF_ENABLE_DETAILED_METRICS,
     CONF_IGNORE_FLAP_MOTION_RULES,
     CONF_IGNORE_MOTION_SENSOR_RULES,
     CONF_POLL_INTERVAL_HOURS,
@@ -59,9 +60,10 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 settings["ignore_motion_sensor_rules"] = user_input[
                     CONF_IGNORE_MOTION_SENSOR_RULES
                 ]
-                settings["poll_interval_hours"] = user_input[
-                    CONF_POLL_INTERVAL_HOURS
-                ]
+                settings["poll_interval_hours"] = user_input[CONF_POLL_INTERVAL_HOURS]
+                settings["enable_detailed_metrics"] = user_input.get(
+                    CONF_ENABLE_DETAILED_METRICS, False
+                )
                 client.add_event_listener("userUpdate", on_user_update)
                 await self._validate_connection(client)
             except OnlyCatApiClientAuthenticationError as exception:
@@ -115,9 +117,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): selector.BooleanSelector(),
                     vol.Required(
                         CONF_POLL_INTERVAL_HOURS,
-                        default=(user_input or {}).get(
-                            CONF_POLL_INTERVAL_HOURS, 6
-                        ),
+                        default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 6),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=1,
@@ -125,6 +125,12 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             step=1,
                         )
                     ),
+                    vol.Optional(
+                        CONF_ENABLE_DETAILED_METRICS,
+                        default=(user_input or {}).get(
+                            CONF_ENABLE_DETAILED_METRICS, False
+                        ),
+                    ): selector.BooleanSelector(),
                 },
             ),
             errors=_errors,
@@ -142,6 +148,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             "ignore_flap_motion_rules": False,
             "ignore_motion_sensor_rules": False,
             "poll_interval_hours": 6,
+            "enable_detailed_metrics": False,
         }
         if user_input is not None and config_entry is not None:
             settings["ignore_flap_motion_rules"] = user_input[
@@ -150,9 +157,10 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             settings["ignore_motion_sensor_rules"] = user_input[
                 CONF_IGNORE_MOTION_SENSOR_RULES
             ]
-            settings["poll_interval_hours"] = user_input[
-                CONF_POLL_INTERVAL_HOURS
-            ]
+            settings["poll_interval_hours"] = user_input[CONF_POLL_INTERVAL_HOURS]
+            settings["enable_detailed_metrics"] = user_input.get(
+                CONF_ENABLE_DETAILED_METRICS, False
+            )
             return self.async_update_reload_and_abort(
                 config_entry,
                 unique_id=config_entry.unique_id,
@@ -180,9 +188,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): selector.BooleanSelector(),
                     vol.Required(
                         CONF_POLL_INTERVAL_HOURS,
-                        default=(user_input or {}).get(
-                            CONF_POLL_INTERVAL_HOURS, 6
-                        ),
+                        default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 6),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=1,
@@ -190,6 +196,12 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             step=1,
                         )
                     ),
+                    vol.Optional(
+                        CONF_ENABLE_DETAILED_METRICS,
+                        default=(user_input or {}).get(
+                            CONF_ENABLE_DETAILED_METRICS, False
+                        ),
+                    ): selector.BooleanSelector(),
                 },
             ),
             errors=errors,
