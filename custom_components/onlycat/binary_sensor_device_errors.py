@@ -10,6 +10,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
 ENTITY_DESCRIPTION = BinarySensorEntityDescription(
     key="OnlyCat",
     name="Device errors",
+    entity_category=EntityCategory.DIAGNOSTIC,
     device_class=BinarySensorDeviceClass.PROBLEM,
     translation_key="onlycat_error_sensor",
 )
@@ -66,11 +68,34 @@ class OnlyCatErrorSensor(CoordinatorEntity, BinarySensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(self.coordinator.data)
         self._attr_is_on = (
             len(self.coordinator.data[self.device.device_id]["errors"]) > 0
         )
+        if (
+            self.coordinator.data[self.device.device_id].get("metrics", None)
+            is not None
+        ):
+            metrics = {}
+            for key in [
+                x["measureName"]
+                for x in self.coordinator.data[self.device.device_id]["metrics"]
+            ]:
+                tmp = [
+                    x
+                    for x in self.coordinator.data[self.device.device_id]["metrics"]
+                    if x["measureName"] == key
+                ]
+                if len(tmp) == 0:
+                    continue
+                tmp.sort(key=lambda x: x["time"], reverse=True)
+                metrics[key] = tmp[0]["value"]
         self._attr_extra_state_attributes = {
             "errors": self.coordinator.data[self.device.device_id]["errors"]
-        }
+        } | (
+            metrics
+            if self.coordinator.data[self.device.device_id].get("metrics", None)
+            is not None
+            else {}
+        )
+        _LOGGER.debug("%s", self._attr_extra_state_attributes)
         self.async_schedule_update_ha_state()

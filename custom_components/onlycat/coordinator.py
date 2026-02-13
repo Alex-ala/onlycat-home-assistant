@@ -55,15 +55,16 @@ class OnlyCatDataUpdateCoordinator(DataUpdateCoordinator):
                 )
             except TimeoutError:
                 _LOGGER.exception("Error fetching OnlyCat errors: %s")
-            try:
-                data[device.device_id][
-                    "metrics"
-                ] = await self.config_entry.runtime_data.client.send_message(
-                    "getDeviceTelemetryMetrics",
-                    {
-                        "deviceId": device.device_id,
-                    },
-                )
-            except TimeoutError:
-                _LOGGER.exception("Error fetching OnlyCat metrics: %s")
+            if self.config_entry.data["settings"].get("enable_detailed_metrics", False):
+                try:
+                    data[device.device_id][
+                        "metrics"
+                    ] = await self.config_entry.runtime_data.client.send_message(
+                        "getDeviceTelemetryMetrics",
+                        {
+                            "deviceId": device.device_id,
+                        },
+                    )
+                except TimeoutError:
+                    _LOGGER.exception("Error fetching OnlyCat metrics: %s")
         return data
