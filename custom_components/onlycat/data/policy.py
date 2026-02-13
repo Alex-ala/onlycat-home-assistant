@@ -150,21 +150,19 @@ class RuleCriteria:
             return None
 
         trigger_source = map_api_list_or_obj(
-            api_criteria.get("eventTriggerSource"), lambda x: EventTriggerSource(x)
+            api_criteria.get("eventTriggerSource"), EventTriggerSource
         )
         classification = map_api_list_or_obj(
-            api_criteria.get("eventClassification"), lambda x: EventClassification(x)
+            api_criteria.get("eventClassification"), EventClassification
         )
         time_range = map_api_list_or_obj(
-            api_criteria.get("timeRange"), lambda x: TimeRange.from_api_response(x)
+            api_criteria.get("timeRange"), TimeRange.from_api_response
         )
         rfid_code = map_api_list_or_obj(api_criteria.get("rfidCode"), lambda x: x)
 
-        flap_states = map_api_list_or_obj(
-            api_criteria.get("flapState"), lambda x: EventFlapstate(x)
-        )
+        flap_states = map_api_list_or_obj(api_criteria.get("flapState"), EventFlapstate)
         motion_states = map_api_list_or_obj(
-            api_criteria.get("motionSensorState"), lambda x: EventMotionstate(x)
+            api_criteria.get("motionSensorState"), EventMotionstate
         )
 
         return cls(
