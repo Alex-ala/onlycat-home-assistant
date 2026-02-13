@@ -15,6 +15,7 @@ from homeassistant.const import Platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OnlyCatApiClient
+from .coordinator import OnlyCatDataUpdateCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
 from .data.device import Device, DeviceUpdate
 from .data.event import Event
@@ -44,6 +45,7 @@ async def async_setup_entry(
     default_settings = {
         "ignore_flap_motion_rules": False,
         "ignore_motion_sensor_rules": False,
+        "poll_interval_hours": 6,
     }
     entry.runtime_data = OnlyCatData(
         client=OnlyCatApiClient(
@@ -52,6 +54,7 @@ async def async_setup_entry(
         devices=[],
         pets=[],
         settings=entry.data.get("settings", default_settings),
+        coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
     )
     await entry.runtime_data.client.connect()
 
