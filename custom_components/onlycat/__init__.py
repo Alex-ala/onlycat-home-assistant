@@ -177,7 +177,7 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
             pet = Pet(device, rfid_code, last_seen, label=label)
             _LOGGER.debug(
                 "Found Pet %s for device %s",
-                label if label else rfid_code,
+                label or rfid_code,
                 device.device_id,
             )
             entry.runtime_data.pets.append(pet)
