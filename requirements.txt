@@ -4,5 +4,5 @@ pip>=21.3.1
 ruff==0.14.2
 pytest==8.4.2
 pytest-asyncio==1.2.0
-python-socketio==5.14.3
+python-socketio==5.16.1
 pycares==4.11.0
