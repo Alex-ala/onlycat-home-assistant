@@ -98,4 +98,5 @@ class OnlyCatErrorSensor(CoordinatorEntity, BinarySensorEntity):
             is not None
             else {}
         )
+        _LOGGER.debug("Updating OnlyCatErrorSensor for device %s: %s",self.device.device_id, self._attr_extra_state_attributes)
         self.async_write_ha_state()
