@@ -66,7 +66,6 @@ class OnlyCatErrorSensor(CoordinatorEntity, BinarySensorEntity):
         self.entity_id = "sensor." + self._attr_unique_id
         self.coordinator.async_add_listener(self._handle_coordinator_update)
 
-
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
