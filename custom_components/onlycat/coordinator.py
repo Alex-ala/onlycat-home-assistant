@@ -24,7 +24,7 @@ class OnlyCatDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: OnlyCatConfigEntry) -> None:
         """Initialize global OnlyCat data updater."""
         interval = timedelta(
-            hours=config_entry.data["settings"].get("poll_interval_hours", 6)
+            hours=config_entry.data["settings"].get("poll_interval_hours", 1)
         )
         super().__init__(
             hass,
@@ -48,7 +48,7 @@ class OnlyCatDataUpdateCoordinator(DataUpdateCoordinator):
                         "deviceId": device.device_id,
                         "limit": 100,
                         "hours": self.config_entry.data["settings"].get(
-                            "poll_interval_hours", 6
+                            "poll_interval_hours", 1
                         ),
                         "measureName": "message",
                     },

@@ -117,7 +117,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): selector.BooleanSelector(),
                     vol.Required(
                         CONF_POLL_INTERVAL_HOURS,
-                        default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 6),
+                        default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 1),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=1,
@@ -147,7 +147,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         settings = {
             "ignore_flap_motion_rules": False,
             "ignore_motion_sensor_rules": False,
-            "poll_interval_hours": 6,
+            "poll_interval_hours": 1,
             "enable_detailed_metrics": False,
         }
         if user_input is not None and config_entry is not None:

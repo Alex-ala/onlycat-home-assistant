@@ -60,6 +60,8 @@ async def async_setup_entry(
 
     await _initialize_devices(entry)
     await _initialize_pets(entry)
+    await entry.runtime_data.coordinator.async_config_entry_first_refresh()
+
 
     async def refresh_subscriptions(args: dict | None) -> None:
         _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)

@@ -64,6 +64,8 @@ class OnlyCatErrorSensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_errors"
         self._api_client = api_client
         self.entity_id = "sensor." + self._attr_unique_id
+        self.coordinator.async_add_listener(self._handle_coordinator_update)
+
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -97,5 +99,4 @@ class OnlyCatErrorSensor(CoordinatorEntity, BinarySensorEntity):
             is not None
             else {}
         )
-        _LOGGER.debug("%s", self._attr_extra_state_attributes)
-        self.async_schedule_update_ha_state()
+        self.async_write_ha_state()
