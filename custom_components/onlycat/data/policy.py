@@ -8,6 +8,9 @@ from datetime import datetime, timedelta, tzinfo
 from enum import Enum, StrEnum
 from typing import TYPE_CHECKING
 
+from jsonschema import ValidationError, validate
+
+from .current_schema import DEVICE_POLICY_SCHEMA
 from .event import (
     Event,
     EventClassification,
@@ -66,9 +69,10 @@ class SoundAction(StrEnum):
 class RuleAction:
     """Data representing an action in a transit policy rule."""
 
-    lock: bool
-    lockout_duration: int
+    lock: bool | None
     sound: SoundAction | None = None
+    lockout_duration: int | None = None
+    final: bool | None = None
 
     @classmethod
     def from_api_response(cls, api_action: dict) -> RuleAction | None:
@@ -137,11 +141,11 @@ class RuleCriteria:
 
     event_trigger_sources: list[EventTriggerSource]
     event_classifications: list[EventClassification]
-    time_ranges: list[TimeRange]
     rfid_codes: list[str]
     rfid_timeout: int | None
-    flap_states: list[EventFlapstate]
+    time_ranges: list[TimeRange]
     motion_sensor_states: list[EventMotionstate]
+    flap_states: list[EventFlapstate]
 
     @classmethod
     def from_api_response(cls, api_criteria: dict) -> RuleCriteria | None:
@@ -204,9 +208,9 @@ class RuleCriteria:
 class Rule:
     """Data representing a rule in a transit policy."""
 
-    action: RuleAction
     criteria: RuleCriteria
-    description: str
+    action: RuleAction
+    description: str | None
     enabled: bool | None
 
     @classmethod
@@ -230,6 +234,7 @@ class TransitPolicy:
     rules: list[Rule]
     idle_lock: bool
     idle_lock_battery: bool
+    ux: dict | None = None  # Undocumented settings done via App (activation sound)
 
     @classmethod
     def from_api_response(cls, api_policy: dict) -> TransitPolicy | None:
@@ -257,14 +262,22 @@ class DeviceTransitPolicy:
     device: Device | None = None
 
     @classmethod
-    def from_api_response(cls, api_policy: dict) -> DeviceTransitPolicy | None:
+    def from_api_response(
+        cls, api_policy: dict, device: Device = None
+    ) -> DeviceTransitPolicy | None:
         """Create a DeviceTransitPolicy instance from API response data."""
         if api_policy is None or "deviceTransitPolicyId" not in api_policy:
             return None
+        try:
+            validate(instance=api_policy, schema=DEVICE_POLICY_SCHEMA)
+        except ValidationError as e:
+            _LOGGER.warning("Transit policy API response failed schema validation")
+            _LOGGER.debug("Validation error details: %s", e)
         _LOGGER.debug("Creating DeviceTransitPolicy from API response: %s", api_policy)
         return cls(
             device_transit_policy_id=api_policy["deviceTransitPolicyId"],
             device_id=api_policy["deviceId"],
+            device=device,
             name=api_policy.get("name"),
             transit_policy=TransitPolicy.from_api_response(
                 api_policy.get("transitPolicy")

@@ -6,7 +6,7 @@ import pytest
 from homeassistant.components.select import SelectEntityDescription
 
 from custom_components.onlycat import Device
-from custom_components.onlycat.select import OnlyCatPolicySelect, load_policies
+from custom_components.onlycat.select import OnlyCatPolicySelect
 
 get_device_transit_policies = [
     [],
@@ -26,15 +26,10 @@ async def test_load_policies(data: list) -> None:
     mock_client.send_message.side_effect = [data]
     device_id = "OC-00000000001"
 
-    policies = await load_policies(mock_client, device_id)
-
     # Verify API call
     mock_client.send_message.assert_called_once_with(
         "getDeviceTransitPolicies", {"deviceId": device_id}
     )
-
-    # Verify results
-    assert len(policies) == len(data)
 
 
 def test_empty_onlycat_policy_slect() -> None:
@@ -49,8 +44,8 @@ def test_empty_onlycat_policy_slect() -> None:
     )
     mock_api_client = AsyncMock()
     select = OnlyCatPolicySelect(
+        coordinator=None,
         device=mock_device,
-        policies=[],
         entity_description=entity_description,
         api_client=mock_api_client,
     )

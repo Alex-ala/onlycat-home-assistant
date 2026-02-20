@@ -51,8 +51,15 @@ class Device:
     description: str | None = None
     time_zone: tzinfo | None = UTC
     device_transit_policy_id: int | None = None
-    device_transit_policy: DeviceTransitPolicy | None = None
+    device_transit_policies: dict[int, DeviceTransitPolicy] | None = None
     settings: dict | None = None
+
+    @property
+    def device_transit_policy(self) -> DeviceTransitPolicy | None:
+        """Get the current transit policy object for the device via its id."""
+        if not self.device_transit_policies or self.device_transit_policy_id is None:
+            return None
+        return self.device_transit_policies.get(self.device_transit_policy_id, None)
 
     @classmethod
     def from_api_response(
@@ -114,6 +121,14 @@ class Device:
         if policy_result == PolicyResult.LOCKED:
             return False
         return None
+
+    def update_device_transit_policy(self, transit_policy: DeviceTransitPolicy) -> None:
+        """Update the device's transit policy."""
+        if self.device_transit_policies is None:
+            self.device_transit_policies = {}
+        self.device_transit_policies.update(
+            {transit_policy.device_transit_policy_id: transit_policy}
+        )
 
 
 @dataclass

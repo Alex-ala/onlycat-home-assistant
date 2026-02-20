@@ -148,10 +148,11 @@ async def _retrieve_current_transit_policy(
         await entry.runtime_data.client.send_message(
             "getDeviceTransitPolicy",
             {"deviceTransitPolicyId": device.device_transit_policy_id},
-        )
+        ),
+        device=device,
     )
     transit_policy.device = device
-    device.device_transit_policy = transit_policy
+    device.update_device_transit_policy(transit_policy)
 
 
 async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
