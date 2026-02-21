@@ -17,10 +17,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import OnlyCatApiClient
 from .coordinator import OnlyCatDataUpdateCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
-from .data.device import Device, DeviceUpdate
+from .data.device import Device
 from .data.event import Event
 from .data.pet import Pet
-from .data.policy import DeviceTransitPolicy
 from .services import async_setup_services
 
 if TYPE_CHECKING:
@@ -32,6 +31,7 @@ PLATFORMS: list[Platform] = [
     Platform.DEVICE_TRACKER,
     Platform.BUTTON,
     Platform.IMAGE,
+    Platform.SENSOR,
 ]
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,27 +72,6 @@ async def async_setup_entry(
                 "getDeviceEvents", {"deviceId": device.device_id, "subscribe": True}
             )
 
-    async def update_device(data: dict) -> None:
-        """Update a device in our runtime data when it is changed."""
-        update = DeviceUpdate.from_api_response(data)
-
-        for device in entry.runtime_data.devices:
-            if device.device_id == update.device_id:
-                updated_device = Device.from_api_response(
-                    await entry.runtime_data.client.send_message(
-                        "getDevice", {"deviceId": update.device_id, "subscribe": True}
-                    )
-                )
-                device.update_from(updated_device)
-                if device.device_transit_policy_id is not None:
-                    await _retrieve_current_transit_policy(entry, device)
-                _LOGGER.debug("Updated device: %s", device)
-                break
-        else:
-            _LOGGER.warning(
-                "Device with ID %s not found in runtime data", update.device_id
-            )
-
     async def subscribe_to_device_event(data: dict) -> None:
         """Subscribe to a device event to get updates about the event in the future."""
         await entry.runtime_data.client.send_message(
@@ -107,7 +86,6 @@ async def async_setup_entry(
     await refresh_subscriptions(None)
     entry.runtime_data.client.add_event_listener("connect", refresh_subscriptions)
     entry.runtime_data.client.add_event_listener("userUpdate", refresh_subscriptions)
-    entry.runtime_data.client.add_event_listener("deviceUpdate", update_device)
     entry.runtime_data.client.add_event_listener(
         "deviceEventUpdate", subscribe_to_device_event
     )
@@ -129,30 +107,27 @@ async def _initialize_devices(entry: OnlyCatConfigEntry) -> None:
         device = Device.from_api_response(
             await entry.runtime_data.client.send_message(
                 "getDevice", {"deviceId": device_id, "subscribe": True}
-            )
+            ),
+            entry,
         )
         entry.runtime_data.devices.append(device)
 
     for device in entry.runtime_data.devices:
         device.settings = entry.runtime_data.settings
+        entry.runtime_data.client.add_event_listener(
+            "deviceUpdate", device.handle_device_update
+        )
+        entry.runtime_data.client.add_event_listener(
+            "getDevice", device.update_device_from_api
+        )
+        entry.runtime_data.client.add_event_listener(
+            "getDeviceTransitPolicy", device.update_device_transit_policy_from_api
+        )
         if device.device_transit_policy_id is not None:
-            await _retrieve_current_transit_policy(entry, device)
-
-
-async def _retrieve_current_transit_policy(
-    entry: OnlyCatConfigEntry, device: Device
-) -> None:
-    if device.device_transit_policy_id is None:
-        return
-    transit_policy = DeviceTransitPolicy.from_api_response(
-        await entry.runtime_data.client.send_message(
-            "getDeviceTransitPolicy",
-            {"deviceTransitPolicyId": device.device_transit_policy_id},
-        ),
-        device=device,
-    )
-    transit_policy.device = device
-    device.update_device_transit_policy(transit_policy)
+            await entry.runtime_data.client.send_message(
+                "getDeviceTransitPolicy",
+                {"deviceTransitPolicyId": device.device_transit_policy_id},
+            )
 
 
 async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:

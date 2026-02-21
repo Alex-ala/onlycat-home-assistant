@@ -1,4 +1,4 @@
-"""Sensor platform for OnlyCat."""
+"""Select platform for OnlyCat."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the sensor platform."""
+    """Set up the select platform."""
     entities = [
         OnlyCatPolicySelect(
             coordinator=entry.runtime_data.coordinator,
@@ -130,8 +130,6 @@ class OnlyCatPolicySelect(CoordinatorEntity, SelectEntity):
             for policy in (self.device.device_transit_policies or {}).values()
         ]
         if device_update.body.device_transit_policy_id:
-            # TODO: If policyid in device_update is unknown to us,
-            # force coordinator update and then search again.
             self.set_current_policy(device_update.body.device_transit_policy_id)
         self.async_write_ha_state()
 

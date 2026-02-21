@@ -46,15 +46,10 @@ class OnlyCatDataUpdateCoordinator(DataUpdateCoordinator):
         if transit_policies is None:
             return
         for policy in transit_policies:
-            transit_policy = DeviceTransitPolicy.from_api_response(
-                await self.config_entry.runtime_data.client.send_message(
-                    "getDeviceTransitPolicy",
-                    {"deviceTransitPolicyId": policy["deviceTransitPolicyId"]},
-                ),
-                device=device,
+            await self.config_entry.runtime_data.client.send_message(
+                "getDeviceTransitPolicy",
+                {"deviceTransitPolicyId": policy["deviceTransitPolicyId"]},
             )
-            if transit_policy is not None:
-                device.update_device_transit_policy(transit_policy)
 
     async def _async_update_data(self) -> dict:
         """Fetch data."""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, tzinfo
@@ -87,6 +88,19 @@ class RuleAction:
             lockout_duration=api_action.get("lockoutDuration"),
             sound=SoundAction(sound) if sound else None,
         )
+
+    def to_dict(self) -> dict:
+        """Custom dict of RuleAction."""
+        dict = {}
+        if self.lock is not None:
+            dict["lock"] = self.lock
+        if self.sound is not None:
+            dict["sound"] = self.sound.value
+        if self.lockout_duration is not None:
+            dict["lockoutDuration"] = self.lockout_duration
+        if self.final is not None:
+            dict["final"] = self.final
+        return dict
 
 
 @dataclass
@@ -179,6 +193,28 @@ class RuleCriteria:
             motion_sensor_states=motion_states,
         )
 
+    def to_dict(self) -> dict:
+        """Custom dict of RuleCriteria."""
+        dict = {
+            "eventTriggerSource": [source.value for source in self.event_trigger_sources],
+            "eventClassification": [
+                classification.value for classification in self.event_classifications
+            ],
+            "rfidCode": self.rfid_codes,
+            "timeRange": [
+                f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-"
+                f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
+                for time_range in self.time_ranges
+            ],
+            "flapState": [state.value for state in self.flap_states],
+            "motionSensorState": [
+                state.value for state in self.motion_sensor_states
+            ],
+        }
+        if self.rfid_timeout is not None:
+            dict["rfidTimeout"] = self.rfid_timeout
+        return dict
+
     def matches(self, event: Event, timezone: tzinfo) -> bool:
         """Check if the event matches the criteria of this rule."""
         if (
@@ -226,6 +262,18 @@ class Rule:
             enabled=api_rule.get("enabled", True),  # Default to True if not specified
         )
 
+    def to_dict(self) -> dict:
+        """Custom dict of Rule."""
+        dict = {
+            "criteria": self.criteria.to_dict(),
+            "action": self.action.to_dict(),
+        }
+        if self.description:
+            dict["description"] = self.description
+        if self.enabled is not None:
+            dict["enabled"] = self.enabled
+        return dict
+
 
 @dataclass
 class TransitPolicy:
@@ -241,14 +289,25 @@ class TransitPolicy:
         """Create a TransitPolicy instance from API response data."""
         if api_policy is None:
             return None
-        _LOGGER.debug("Creating TransitPolicy from API response: %s", api_policy)
         rules = api_policy.get("rules")
 
         return cls(
             rules=[Rule.from_api_rule(rule) for rule in rules] if rules else None,
             idle_lock=api_policy.get("idleLock"),
             idle_lock_battery=api_policy.get("idleLockBattery"),
+            ux=api_policy.get("ux"),
         )
+
+    def to_dict(self) -> dict:
+        """Custom dict of TransitPolicy."""
+        dict = {
+            "rules": [rule.to_dict() for rule in self.rules] if self.rules else [],
+            "idleLock": self.idle_lock,
+            "idleLockBattery": self.idle_lock_battery,
+        }
+        if self.ux:
+             dict["ux"] = self.ux
+        return dict
 
 
 @dataclass
@@ -272,8 +331,8 @@ class DeviceTransitPolicy:
             validate(instance=api_policy, schema=DEVICE_POLICY_SCHEMA)
         except ValidationError as e:
             _LOGGER.warning("Transit policy API response failed schema validation")
-            _LOGGER.debug("Validation error details: %s", e)
-        _LOGGER.debug("Creating DeviceTransitPolicy from API response: %s", api_policy)
+            #_LOGGER.debug("Validation error details: %s", e)
+        _LOGGER.debug("Creating DeviceTransitPolicy from API response: %s", api_policy.get("name"))
         return cls(
             device_transit_policy_id=api_policy["deviceTransitPolicyId"],
             device_id=api_policy["deviceId"],
@@ -283,6 +342,16 @@ class DeviceTransitPolicy:
                 api_policy.get("transitPolicy")
             ),
         )
+
+    def to_dict(self) -> dict:
+        """Custom dict of DeviceTransitPolicy."""
+        dict = {
+            "deviceTransitPolicyId": self.device_transit_policy_id,
+            "deviceId": self.device_id,
+            "name": self.name,
+            "transitPolicy": self.transit_policy.to_dict() if self.transit_policy else None,
+        }
+        return dict
 
     def determine_policy_result(self, event: Event) -> PolicyResult:
         """
