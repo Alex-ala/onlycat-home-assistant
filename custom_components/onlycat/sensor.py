@@ -6,9 +6,9 @@ import logging
 import json
 from typing import TYPE_CHECKING
 
-from homeassistant.components.text import (
-    TextEntity,
-    TextEntityDescription,
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorEntityDescription,
 )
 from homeassistant.const import MATCH_ALL
 from homeassistant.core import callback
@@ -36,12 +36,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up the text platform."""
     entities = [
-        OnlyCatPolicyText(
+        OnlyCatPolicySensor(
             coordinator=entry.runtime_data.coordinator,
             device=device,
             policy=policy,
             policy_id=policy_id,
-            entity_description=TextEntityDescription(
+            entity_description=SensorEntityDescription(
                 key = "OnlyCat",
                 name = "Door Policy: " + policy.name,
                 icon="mdi:home-clock",
@@ -87,8 +87,6 @@ class OnlyCatPolicySensor(CoordinatorEntity, SensorEntity):
         CoordinatorEntity.__init__(self, coordinator, device.device_id)
         self.coordinator = coordinator
         self.entity_description = entity_description
-        self._state = None
-        self._attr_raw_data = None
         self._api_client = api_client
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_policy_" + policy.name.replace(" ", "_").lower()
         self.policy_id = policy_id

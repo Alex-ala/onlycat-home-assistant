@@ -195,24 +195,43 @@ class RuleCriteria:
 
     def to_dict(self) -> dict:
         """Custom dict of RuleCriteria."""
-        dict = {
-            "eventTriggerSource": [source.value for source in self.event_trigger_sources],
-            "eventClassification": [
-                classification.value for classification in self.event_classifications
-            ],
-            "rfidCode": self.rfid_codes,
-            "timeRange": [
-                f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-"
-                f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
-                for time_range in self.time_ranges
-            ],
-            "flapState": [state.value for state in self.flap_states],
-            "motionSensorState": [
-                state.value for state in self.motion_sensor_states
-            ],
-        }
+        dict = {}
+        if self.rfid_codes:
+            dict["rfidCode"] = self.rfid_codes
+        if self.time_ranges:
+            if len(self.time_ranges) == 1:
+                time_range = self.time_ranges[0]
+                dict["timeRange"] = f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-" \
+                                    f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
+            else:
+                dict["timeRange"] = [
+                    f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-" \
+                    f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
+                    for time_range in self.time_ranges
+                ]
+        if self.event_trigger_sources:
+            if len(self.event_trigger_sources) == 1:
+                dict["eventTriggerSource"] = self.event_trigger_sources[0].value
+            else:
+                dict["eventTriggerSource"] = [source.value for source in self.event_trigger_sources]
+        if self.event_classifications:
+            if len(self.event_classifications) == 1:
+                dict["eventClassification"] = self.event_classifications[0].value
+            else:
+                dict["eventClassification"] = [classification.value for classification in self.event_classifications]
+
         if self.rfid_timeout is not None:
             dict["rfidTimeout"] = self.rfid_timeout
+        if self.flap_states:
+            if len(self.flap_states) == 1:
+                dict["flapState"] = self.flap_states[0].value
+            else:
+                dict["flapState"] = [state.value for state in self.flap_states]
+        if self.motion_sensor_states:
+            if len(self.motion_sensor_states) == 1:
+                dict["motionSensorState"] = self.motion_sensor_states[0].value
+            else:
+                dict["motionSensorState"] = [state.value for state in self.motion_sensor_states]
         return dict
 
     def matches(self, event: Event, timezone: tzinfo) -> bool:
@@ -268,10 +287,10 @@ class Rule:
             "criteria": self.criteria.to_dict(),
             "action": self.action.to_dict(),
         }
-        if self.description:
-            dict["description"] = self.description
         if self.enabled is not None:
             dict["enabled"] = self.enabled
+        if self.description:
+            dict["description"] = self.description
         return dict
 
 
@@ -347,9 +366,8 @@ class DeviceTransitPolicy:
         """Custom dict of DeviceTransitPolicy."""
         dict = {
             "deviceTransitPolicyId": self.device_transit_policy_id,
-            "deviceId": self.device_id,
-            "name": self.name,
             "transitPolicy": self.transit_policy.to_dict() if self.transit_policy else None,
+            "name": self.name
         }
         return dict
 

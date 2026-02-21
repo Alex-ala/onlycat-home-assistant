@@ -1,12 +1,15 @@
 """Provides services for OnlyCat."""
 
 import logging
+import json
 
 import voluptuous as vol
 from homeassistant.const import STATE_HOME, STATE_NOT_HOME
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+
+from custom_components.onlycat.data import OnlyCatConfigEntry
 
 from .const import DOMAIN
 from .device_tracker import OnlyCatPetTracker
@@ -31,7 +34,7 @@ def _get_pet_tracker_entity(call: ServiceCall) -> OnlyCatPetTracker:
     return entity_obj
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
+async def async_setup_services(hass: HomeAssistant, entry: OnlyCatConfigEntry) -> None:
     """Create services for OnlyCat."""
     hass.services.async_register(
         DOMAIN,
@@ -54,6 +57,20 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             }
         ),
     )
+    async def update_device_policy_handler(call: ServiceCall) -> ServiceResponse:
+        """Wrapper to pass entry to the handler."""
+        return await async_handle_update_device_policy(call, entry)
+
+    hass.services.async_register(
+        DOMAIN,
+        "update_device_policy",
+        update_device_policy_handler,
+        schema=vol.Schema(
+            {
+                vol.Required("policy_data"): cv.string,
+            }
+        ),
+    )
 
 
 async def async_handle_set_pet_presence(call: ServiceCall) -> ServiceResponse:
@@ -72,3 +89,15 @@ async def async_handle_toggle_pet_presence(call: ServiceCall) -> ServiceResponse
     new_state = STATE_NOT_HOME if current_state == STATE_HOME else STATE_HOME
     await entity_obj.manual_update_location(new_state)
     _LOGGER.info("Toggled %s presence to: %s", entity_obj.entity_id, new_state)
+
+async def async_handle_update_device_policy(
+    call: ServiceCall,
+    entry: OnlyCatConfigEntry,
+) -> ServiceResponse:
+    """Handle the set device policy service call."""
+    policy_data: str = call.data["policy_data"]
+    policy_dict = json.loads(policy_data)
+    response = await entry.runtime_data.client.send_message(
+        "updateDeviceTransitPolicy", json.dumps(policy_dict)
+    )
+    _LOGGER.info("Updated device policy %s: %s", policy_data, response)
