@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, tzinfo
@@ -90,17 +89,17 @@ class RuleAction:
         )
 
     def to_dict(self) -> dict:
-        """Custom dict of RuleAction."""
-        dict = {}
+        """Return a custom dict of RuleAction."""
+        data = {}
         if self.lock is not None:
-            dict["lock"] = self.lock
+            data["lock"] = self.lock
         if self.sound is not None:
-            dict["sound"] = self.sound.value
+            data["sound"] = self.sound.value
         if self.lockout_duration is not None:
-            dict["lockoutDuration"] = self.lockout_duration
+            data["lockoutDuration"] = self.lockout_duration
         if self.final is not None:
-            dict["final"] = self.final
-        return dict
+            data["final"] = self.final
+        return data
 
 
 @dataclass
@@ -193,46 +192,55 @@ class RuleCriteria:
             motion_sensor_states=motion_states,
         )
 
-    def to_dict(self) -> dict:
-        """Custom dict of RuleCriteria."""
-        dict = {}
+    def to_dict(self) -> dict:  # noqa: PLR0912
+        """Return a custom data of RuleCriteria."""
+        data = {}
         if self.rfid_codes:
-            dict["rfidCode"] = self.rfid_codes
+            data["rfidCode"] = self.rfid_codes
         if self.time_ranges:
             if len(self.time_ranges) == 1:
                 time_range = self.time_ranges[0]
-                dict["timeRange"] = f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-" \
-                                    f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
+                data["timeRange"] = (
+                    f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-"
+                    f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
+                )
             else:
-                dict["timeRange"] = [
-                    f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-" \
+                data["timeRange"] = [
+                    f"{time_range.start_hour:02d}:{time_range.start_minute:02d}-"
                     f"{time_range.end_hour:02d}:{time_range.end_minute:02d}"
                     for time_range in self.time_ranges
                 ]
         if self.event_trigger_sources:
             if len(self.event_trigger_sources) == 1:
-                dict["eventTriggerSource"] = self.event_trigger_sources[0].value
+                data["eventTriggerSource"] = self.event_trigger_sources[0].value
             else:
-                dict["eventTriggerSource"] = [source.value for source in self.event_trigger_sources]
+                data["eventTriggerSource"] = [
+                    source.value for source in self.event_trigger_sources
+                ]
         if self.event_classifications:
             if len(self.event_classifications) == 1:
-                dict["eventClassification"] = self.event_classifications[0].value
+                data["eventClassification"] = self.event_classifications[0].value
             else:
-                dict["eventClassification"] = [classification.value for classification in self.event_classifications]
+                data["eventClassification"] = [
+                    classification.value
+                    for classification in self.event_classifications
+                ]
 
         if self.rfid_timeout is not None:
-            dict["rfidTimeout"] = self.rfid_timeout
+            data["rfidTimeout"] = self.rfid_timeout
         if self.flap_states:
             if len(self.flap_states) == 1:
-                dict["flapState"] = self.flap_states[0].value
+                data["flapState"] = self.flap_states[0].value
             else:
-                dict["flapState"] = [state.value for state in self.flap_states]
+                data["flapState"] = [state.value for state in self.flap_states]
         if self.motion_sensor_states:
             if len(self.motion_sensor_states) == 1:
-                dict["motionSensorState"] = self.motion_sensor_states[0].value
+                data["motionSensorState"] = self.motion_sensor_states[0].value
             else:
-                dict["motionSensorState"] = [state.value for state in self.motion_sensor_states]
-        return dict
+                data["motionSensorState"] = [
+                    state.value for state in self.motion_sensor_states
+                ]
+        return data
 
     def matches(self, event: Event, timezone: tzinfo) -> bool:
         """Check if the event matches the criteria of this rule."""
@@ -282,16 +290,16 @@ class Rule:
         )
 
     def to_dict(self) -> dict:
-        """Custom dict of Rule."""
-        dict = {
+        """Return a custom dict of Rule."""
+        data = {
             "criteria": self.criteria.to_dict(),
             "action": self.action.to_dict(),
         }
         if self.enabled is not None:
-            dict["enabled"] = self.enabled
+            data["enabled"] = self.enabled
         if self.description:
-            dict["description"] = self.description
-        return dict
+            data["description"] = self.description
+        return data
 
 
 @dataclass
@@ -318,15 +326,15 @@ class TransitPolicy:
         )
 
     def to_dict(self) -> dict:
-        """Custom dict of TransitPolicy."""
-        dict = {
+        """Return a custom dict of TransitPolicy."""
+        data = {
             "rules": [rule.to_dict() for rule in self.rules] if self.rules else [],
             "idleLock": self.idle_lock,
             "idleLockBattery": self.idle_lock_battery,
         }
         if self.ux:
-             dict["ux"] = self.ux
-        return dict
+            data["ux"] = self.ux
+        return data
 
 
 @dataclass
@@ -350,8 +358,10 @@ class DeviceTransitPolicy:
             validate(instance=api_policy, schema=DEVICE_POLICY_SCHEMA)
         except ValidationError as e:
             _LOGGER.warning("Transit policy API response failed schema validation")
-            #_LOGGER.debug("Validation error details: %s", e)
-        _LOGGER.debug("Creating DeviceTransitPolicy from API response: %s", api_policy.get("name"))
+            _LOGGER.debug("Validation error details: %s", e)
+        _LOGGER.debug(
+            "Creating DeviceTransitPolicy from API response: %s", api_policy.get("name")
+        )
         return cls(
             device_transit_policy_id=api_policy["deviceTransitPolicyId"],
             device_id=api_policy["deviceId"],
@@ -363,13 +373,14 @@ class DeviceTransitPolicy:
         )
 
     def to_dict(self) -> dict:
-        """Custom dict of DeviceTransitPolicy."""
-        dict = {
+        """Return a custom dict of DeviceTransitPolicy."""
+        return {
             "deviceTransitPolicyId": self.device_transit_policy_id,
-            "transitPolicy": self.transit_policy.to_dict() if self.transit_policy else None,
-            "name": self.name
+            "transitPolicy": self.transit_policy.to_dict()
+            if self.transit_policy
+            else None,
+            "name": self.name,
         }
-        return dict
 
     def determine_policy_result(self, event: Event) -> PolicyResult:
         """

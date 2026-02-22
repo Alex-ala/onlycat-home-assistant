@@ -1,7 +1,7 @@
 """Provides services for OnlyCat."""
 
-import logging
 import json
+import logging
 
 import voluptuous as vol
 from homeassistant.const import STATE_HOME, STATE_NOT_HOME
@@ -57,8 +57,9 @@ async def async_setup_services(hass: HomeAssistant, entry: OnlyCatConfigEntry) -
             }
         ),
     )
+
     async def update_device_policy_handler(call: ServiceCall) -> ServiceResponse:
-        """Wrapper to pass entry to the handler."""
+        """Handle service call and inject entry."""
         return await async_handle_update_device_policy(call, entry)
 
     hass.services.async_register(
@@ -90,6 +91,7 @@ async def async_handle_toggle_pet_presence(call: ServiceCall) -> ServiceResponse
     await entity_obj.manual_update_location(new_state)
     _LOGGER.info("Toggled %s presence to: %s", entity_obj.entity_id, new_state)
 
+
 async def async_handle_update_device_policy(
     call: ServiceCall,
     entry: OnlyCatConfigEntry,
@@ -98,6 +100,6 @@ async def async_handle_update_device_policy(
     policy_data: str = call.data["policy_data"]
     policy_dict = json.loads(policy_data)
     response = await entry.runtime_data.client.send_message(
-        "updateDeviceTransitPolicy", json.dumps(policy_dict)
+        "updateDeviceTransitPolicy", policy_dict
     )
     _LOGGER.info("Updated device policy %s: %s", policy_data, response)

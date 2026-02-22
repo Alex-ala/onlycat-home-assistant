@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 import json
+import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor import (
@@ -41,17 +41,10 @@ async def async_setup_entry(
             device=device,
             policy=policy,
             policy_id=policy_id,
-            entity_description=SensorEntityDescription(
-                key = "OnlyCat",
-                name = "Door Policy: " + policy.name,
-                icon="mdi:home-clock",
-                translation_key="onlycat_policy_sensor",
-            ),
             api_client=entry.runtime_data.client,
         )
         for device in entry.runtime_data.devices
         for policy_id, policy in (device.device_transit_policies or {}).items()
-
     ]
     async_add_entities(entities)
     entry.runtime_data.coordinator.async_update_listeners()
@@ -80,15 +73,25 @@ class OnlyCatPolicySensor(CoordinatorEntity, SensorEntity):
         device: Device,
         policy: DeviceTransitPolicy,
         policy_id: int,
-        entity_description: SensorEntityDescription,
         api_client: OnlyCatApiClient,
     ) -> None:
         """Initialize the sensor class."""
         CoordinatorEntity.__init__(self, coordinator, device.device_id)
         self.coordinator = coordinator
-        self.entity_description = entity_description
+        self.entity_description = (
+            SensorEntityDescription(
+                key="OnlyCat",
+                name="Door Policy: " + policy.name,
+                icon="mdi:home-clock",
+                translation_key="onlycat_policy_sensor",
+            ),
+        )
         self._api_client = api_client
-        self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_policy_" + policy.name.replace(" ", "_").lower()
+        self._attr_unique_id = (
+            device.device_id.replace("-", "_").lower()
+            + "_policy_"
+            + policy.name.replace(" ", "_").lower()
+        )
         self.policy_id = policy_id
         self.policy = policy
         self.device: Device = device
@@ -97,11 +100,10 @@ class OnlyCatPolicySensor(CoordinatorEntity, SensorEntity):
 
     @callback
     def update_sensor(self) -> None:
-        """Update the sensor state"""
+        """Update the sensor state."""
         self.policy = self.device.device_transit_policies.get(self.policy_id)
         self._attr_extra_state_attributes = {
             "policy": self.policy.to_dict(),
-            "policy_json": json.dumps(self.policy.to_dict())
-            }
+            "policy_json": json.dumps(self.policy.to_dict()),
+        }
         self.async_write_ha_state()
-

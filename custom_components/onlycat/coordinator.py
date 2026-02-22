@@ -15,7 +15,6 @@ from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DOMAIN
-from .data.policy import DeviceTransitPolicy
 
 _LOGGER = logging.getLogger(__name__)
 

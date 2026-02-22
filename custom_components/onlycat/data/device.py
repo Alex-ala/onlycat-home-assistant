@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import zoneinfo
-from dataclasses import dataclass, fields, field
+from dataclasses import dataclass, field, fields
 from datetime import UTC, datetime, tzinfo
 from typing import TYPE_CHECKING
 
@@ -118,10 +118,10 @@ class Device:
         )
         if updated_device is None:
             return
-        for field in fields(self):
-            new_value = getattr(updated_device, field.name, None)
+        for obj_field in fields(self):
+            new_value = getattr(updated_device, obj_field.name, None)
             if new_value is not None:
-                setattr(self, field.name, new_value)
+                setattr(self, obj_field.name, new_value)
         if self.device_transit_policy_id is not None:
             await self.config_entry.runtime_data.client.send_message(
                 "getDeviceTransitPolicy",
@@ -150,7 +150,9 @@ class Device:
             return False
         return None
 
-    async def update_device_transit_policy(self, transit_policy: DeviceTransitPolicy) -> None:
+    async def update_device_transit_policy(
+        self, transit_policy: DeviceTransitPolicy
+    ) -> None:
         """Update the device's transit policy."""
         if self.device_transit_policies is None:
             self.device_transit_policies = {}
