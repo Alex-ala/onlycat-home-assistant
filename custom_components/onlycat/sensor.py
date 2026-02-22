@@ -78,14 +78,12 @@ class OnlyCatPolicySensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor class."""
         CoordinatorEntity.__init__(self, coordinator, device.device_id)
         self.coordinator = coordinator
-        self.entity_description = (
-            SensorEntityDescription(
+        self.entity_description = SensorEntityDescription(
                 key="OnlyCat",
                 name="Door Policy: " + policy.name,
                 icon="mdi:home-clock",
                 translation_key="onlycat_policy_sensor",
-            ),
-        )
+            )
         self._api_client = api_client
         self._attr_unique_id = (
             device.device_id.replace("-", "_").lower()
