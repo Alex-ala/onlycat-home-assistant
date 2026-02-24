@@ -70,18 +70,23 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         if data["deviceId"] != self.device.device_id:
             return
 
-        self._current_event.update_from(EventUpdate.from_api_response(data).event)
-        self.determine_new_state(self._current_event)
-        self.async_write_ha_state()
+        event_update = EventUpdate.from_api_response(data)
+        if event_update and event_update.event:
+            self._current_event.update_from(event_update.event)
+            self.determine_new_state(self._current_event)
+            self.async_write_ha_state()
 
     def determine_new_state(self, event: Event) -> None:
         """Determine the new state of the sensor based on the event."""
         if not event:
             return
 
-        if event.frame_count:
+        if event.event_classification == EventClassification.HUMAN_ACTIVITY:
+            _LOGGER.debug("Human activity detected for event %s", event)
+            self._attr_is_on = True
+
+        if event.frame_count is not None:
             self._attr_is_on = False
             self._current_event = Event()
-        elif event.event_classification == EventClassification.HUMAN_ACTIVITY:
             _LOGGER.debug("Human activity detected for event %s", event)
             self._attr_is_on = True
