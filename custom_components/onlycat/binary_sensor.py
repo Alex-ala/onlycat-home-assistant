@@ -9,6 +9,7 @@ from .binary_sensor_contraband import OnlyCatContrabandSensor
 from .binary_sensor_device_errors import OnlyCatErrorSensor
 from .binary_sensor_event import OnlyCatEventSensor
 from .binary_sensor_lock import OnlyCatLockSensor
+from .binary_sensor_human import OnlyCatHumanSensor
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -36,6 +37,10 @@ async def async_setup_entry(
                 api_client=entry.runtime_data.client,
             ),
             OnlyCatLockSensor(
+                device=device,
+                api_client=entry.runtime_data.client,
+            ),
+            OnlyCatHumanSensor(
                 device=device,
                 api_client=entry.runtime_data.client,
             ),
