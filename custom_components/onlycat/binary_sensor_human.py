@@ -88,5 +88,3 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         if event.frame_count is not None:
             self._attr_is_on = False
             self._current_event = Event()
-            _LOGGER.debug("Human activity detected for event %s", event)
-            self._attr_is_on = True
