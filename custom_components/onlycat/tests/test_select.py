@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock
 
-import pytest
 from homeassistant.components.select import SelectEntityDescription
 
 from custom_components.onlycat import Device
@@ -18,20 +17,6 @@ get_device_transit_policies = [
 ]
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("data", get_device_transit_policies)
-async def test_load_policies(data: list) -> None:
-    """Test loading policies for a device."""
-    mock_client = AsyncMock()
-    mock_client.send_message.side_effect = [data]
-    device_id = "OC-00000000001"
-
-    # Verify API call
-    mock_client.send_message.assert_called_once_with(
-        "getDeviceTransitPolicies", {"deviceId": device_id}
-    )
-
-
 def test_empty_onlycat_policy_slect() -> None:
     """Tests initialization of OnlyCatPolicySelect with no active or known policies."""
     mock_device = Device(
@@ -43,11 +28,13 @@ def test_empty_onlycat_policy_slect() -> None:
         key="onlycat_policy_select",
     )
     mock_api_client = AsyncMock()
+    mock_coordinator = AsyncMock()
     select = OnlyCatPolicySelect(
-        coordinator=None,
+        coordinator=mock_coordinator,
         device=mock_device,
         entity_description=entity_description,
         api_client=mock_api_client,
     )
 
     assert select.device.device_id == "OC-00000000001"
+    mock_coordinator.async_add_listener.assert_called_once()

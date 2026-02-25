@@ -8,16 +8,13 @@ DEVICE_POLICY_SCHEMA = {
         # Entries manually added to schema from OnlyCat website
         "deviceTransitPolicyId": {
             "type": "integer",
-            "description": "Unique identifier for the transit policy, given by OnlyCat."
+            "description": "Unique identifier for the transit policy, given by OnlyCat.",
         },
         "deviceId": {
             "type": "string",
-            "description": "Unique identifier for the device, given by OnlyCat."
+            "description": "Unique identifier for the device, given by OnlyCat.",
         },
-        "name": {
-            "type": "string",
-            "description": "Name of the transit policy."
-        },
+        "name": {"type": "string", "description": "Name of the transit policy."},
         # End of manually added entries
         "transitPolicy": {
             "type": "object",
@@ -43,12 +40,12 @@ DEVICE_POLICY_SCHEMA = {
                                         "coin",
                                         "deny",
                                         "fanfare",
-                                        "success"
-                                    ]
+                                        "success",
+                                    ],
                                 }
                             },
                         }
-                    }
+                    },
                 },
                 # End of manually added entries
                 "idleLock": {
@@ -206,7 +203,7 @@ DEVICE_POLICY_SCHEMA = {
                 },
             },
             "additionalProperties": False,
-        }
+        },
     },
     "additionalProperties": False,
 }
