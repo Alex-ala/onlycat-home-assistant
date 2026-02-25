@@ -56,9 +56,7 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         self._attr_raw_data = None
         self.device: Device = device
         self._current_event: Event = Event()
-        self._attr_unique_id = (
-            device.device_id.replace("-", "_").lower() + "_human"
-        )
+        self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_human"
         self._api_client = api_client
         self.entity_id = "binary_sensor." + self._attr_unique_id
 
