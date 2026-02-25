@@ -99,7 +99,7 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         if not event:
             return
 
-        if event.frame_count:
+        if event.frame_count is not None:
             self._attr_is_on = False
             self._last_completed_event_id = (
                 str(event.event_id) if event.event_id is not None else None
