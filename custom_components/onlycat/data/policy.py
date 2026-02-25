@@ -359,6 +359,7 @@ class DeviceTransitPolicy:
         except ValidationError as e:
             _LOGGER.warning("Transit policy API response failed schema validation")
             _LOGGER.debug("Validation error details: %s", e)
+            _LOGGER.debug("Invalid API response: %s", api_policy)
         _LOGGER.debug(
             "Creating DeviceTransitPolicy from API response: %s", api_policy.get("name")
         )

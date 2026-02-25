@@ -102,4 +102,5 @@ async def async_handle_update_device_policy(
     response = await entry.runtime_data.client.send_message(
         "updateDeviceTransitPolicy", policy_dict
     )
+    await entry.runtime_data.coordinator.async_refresh()
     _LOGGER.info("Updated device policy %s: %s", policy_data, response)

@@ -5,9 +5,52 @@ DEVICE_POLICY_SCHEMA = {
     "title": "Transit Policy Schema",
     "type": "object",
     "properties": {
+        # Entries manually added to schema from OnlyCat website
+        "deviceTransitPolicyId": {
+            "type": "integer",
+            "description": "Unique identifier for the transit policy, given by OnlyCat."
+        },
+        "deviceId": {
+            "type": "string",
+            "description": "Unique identifier for the device, given by OnlyCat."
+        },
+        "name": {
+            "type": "string",
+            "description": "Name of the transit policy."
+        },
+        # End of manually added entries
         "transitPolicy": {
             "type": "object",
             "properties": {
+                # Entries manually added to schema from OnlyCat website
+                "ux": {
+                    "type": "object",
+                    "description": "Interaction settings for this policy.",
+                    "properties": {
+                        "onActivate": {
+                            "type": "object",
+                            "description": "Configuration for sound played when this policy is activated.",
+                            "properties": {
+                                "sound": {
+                                    "type": "string",
+                                    "description": "Sound to play when this policy is activated.",
+                                    "enum": [
+                                        "affirm",
+                                        "alarm",
+                                        "angry-meow",
+                                        "bell",
+                                        "choir",
+                                        "coin",
+                                        "deny",
+                                        "fanfare",
+                                        "success"
+                                    ]
+                                }
+                            },
+                        }
+                    }
+                },
+                # End of manually added entries
                 "idleLock": {
                     "type": "boolean",
                     "description": "Indicates if the device should be locked when idle.",
@@ -22,6 +65,16 @@ DEVICE_POLICY_SCHEMA = {
                     "items": {
                         "type": "object",
                         "properties": {
+                            # Entries manually added to schema from OnlyCat website
+                            "enabled": {
+                                "type": "boolean",
+                                "description": "Indicates whether this rule is enabled.",
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Description of the rule.",
+                            },
+                            # End of manually added entries
                             "criteria": {
                                 "type": "object",
                                 "properties": {
