@@ -99,6 +99,7 @@ class OnlyCatPolicySensor(CoordinatorEntity, SensorEntity):
     @callback
     def update_sensor(self) -> None:
         """Update the sensor state."""
+        self._attr_native_value = "Configured"
         self.policy = self.device.device_transit_policies.get(self.policy_id)
         self._attr_extra_state_attributes = {
             "policy": self.policy.to_dict(),
