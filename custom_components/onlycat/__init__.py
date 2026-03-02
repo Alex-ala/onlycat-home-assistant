@@ -42,18 +42,13 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
-    default_settings = {
-        "ignore_flap_motion_rules": False,
-        "ignore_motion_sensor_rules": False,
-        "poll_interval_hours": 6,
-    }
     entry.runtime_data = OnlyCatData(
         client=OnlyCatApiClient(
             token=entry.data["token"], session=async_get_clientsession(hass)
         ),
         devices=[],
         pets=[],
-        settings=entry.data.get("settings", default_settings),
+        settings=entry.data["settings"],
         coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
     )
     await entry.runtime_data.client.connect()
@@ -181,3 +176,26 @@ async def async_reload_entry(
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, config_entry: OnlyCatConfigEntry
+) -> bool:
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+    if "settings" not in config_entry.data:
+        new_data = {**config_entry.data}
+        default_settings = {
+            "ignore_flap_motion_rules": False,
+            "ignore_motion_sensor_rules": False,
+            "poll_interval_hours": 1,
+        }
+        new_data["settings"] = default_settings
+    hass.config_entries.async_update_entry(
+        config_entry, data=new_data, minor_version=1, version=2
+    )
+    return True
