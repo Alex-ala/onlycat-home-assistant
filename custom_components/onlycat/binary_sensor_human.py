@@ -56,6 +56,7 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         self._attr_raw_data = None
         self.device: Device = device
         self._current_event: Event = Event()
+        self._last_completed_event_id: str | None = None
         self._attr_unique_id = device.device_id.replace("-", "_").lower() + "_human"
         self._api_client = api_client
         self.entity_id = "binary_sensor." + self._attr_unique_id
@@ -68,7 +69,28 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         if data["deviceId"] != self.device.device_id:
             return
 
-        self._current_event.update_from(EventUpdate.from_api_response(data).event)
+        event_update = EventUpdate.from_api_response(data)
+        if not event_update or not event_update.event:
+            return
+
+        ev = event_update.event
+        new_id = str(ev.event_id) if ev.event_id is not None else None
+        current_id = (
+            str(self._current_event.event_id)
+            if self._current_event.event_id is not None
+            else None
+        )
+
+        if (
+            self._last_completed_event_id is not None
+            and new_id == self._last_completed_event_id
+        ):
+            return
+
+        if current_id is not None and current_id != new_id:
+            self._current_event = Event()
+
+        self._current_event.update_from(ev)
         self.determine_new_state(self._current_event)
         self.async_write_ha_state()
 
@@ -77,9 +99,14 @@ class OnlyCatHumanSensor(BinarySensorEntity):
         if not event:
             return
 
-        if event.frame_count:
+        if event.frame_count is not None:
             self._attr_is_on = False
-            self._current_event = Event()
+            self._last_completed_event_id = (
+                str(event.event_id) if event.event_id is not None else None
+            )
         elif event.event_classification == EventClassification.HUMAN_ACTIVITY:
-            _LOGGER.debug("Human activity detected for event %s", event)
+            if not self._attr_is_on:
+                _LOGGER.debug("Human activity detected for event %s", event)
             self._attr_is_on = True
+        else:
+            self._attr_is_on = False
