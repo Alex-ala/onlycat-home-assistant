@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import aiohttp
 import contextlib
 import datetime as dt
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+import aiohttp
 from homeassistant.components.camera import (
     Camera,
     CameraEntityDescription,
@@ -19,7 +19,7 @@ from homeassistant.components.camera import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from .const import DOMAIN
+from .const import DOMAIN, HTTP_STATUS_OK
 from .data.event import Event, EventUpdate
 
 if TYPE_CHECKING:
@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from .api import OnlyCatApiClient
     from .data.__init__ import OnlyCatConfigEntry
     from .data.device import Device
-    from .image import OnlyCatLastImage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -149,17 +148,19 @@ class OnlyCatLastVideo(Camera):
         )
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(self._attr_image_url) as resp:
-                    if resp.status == 200:
-                        self._cached_image = await resp.read()
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(self._attr_image_url) as resp,
+            ):
+                if resp.status == HTTP_STATUS_OK:
+                    self._cached_image = await resp.read()
         except Exception:
             _LOGGER.exception("Failed to fetch image from %s", self._attr_image_url)
 
         _LOGGER.debug(
             "Updated image URL %s: %s",
             self._attr_image_last_updated,
-            self._attr_image_url
+            self._attr_image_url,
         )
         self.async_write_ha_state()
         return self._cached_image
