@@ -30,7 +30,6 @@ PLATFORMS: list[Platform] = [
     Platform.SELECT,
     Platform.DEVICE_TRACKER,
     Platform.BUTTON,
-    Platform.IMAGE,
     Platform.SENSOR,
     Platform.CAMERA,
 ]
@@ -51,8 +50,6 @@ async def async_setup_entry(
         pets=[],
         settings=entry.data["settings"],
         coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
-        camera_entities={},
-        image_entities={},
     )
     await entry.runtime_data.client.connect()
 

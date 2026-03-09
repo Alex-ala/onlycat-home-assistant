@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import aiohttp
 import contextlib
 import datetime as dt
 import logging
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.components.camera import (
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+IMAGE_BASEURL = "https://gateway.onlycat.com/events/"
 VIDEO_BASEURL = "https://gateway.onlycat.com/sharing/video/"
 ENTITY_DESCRIPTION = CameraEntityDescription(
     key="OnlyCat",
@@ -54,9 +57,6 @@ async def async_setup_entry(
     ]
 
     async_add_entities(entities)
-
-    for entity in entities:
-        entry.runtime_data.camera_entities[entity.device.device_id] = entity
 
     _LOGGER.debug("Initializing camera entities with last events")
     for entity in entities:
@@ -126,14 +126,43 @@ class OnlyCatLastVideo(Camera):
         """Return a still image response from the camera (thumbnail)."""
         if not self._current_event:
             return None
+        self._cached_image: bytes | None = None
 
-        image_entities = self.device.config_entry.runtime_data.image_entities
-        image_entity: OnlyCatLastImage = image_entities.get(self.device.device_id)
+        if self._current_event.timestamp:
+            self._current_event.timestamp += timedelta(seconds=1)
+            self._attr_image_last_updated = self._current_event.timestamp
 
-        if image_entity:
-            return await image_entity.async_image()
+        frame_to_show = (
+            self._current_event.poster_frame_index
+            if self._current_event.poster_frame_index is not None
+            else self._current_event.frame_count // 3
+            if self._current_event.frame_count is not None
+            else 1
+        )
+        self._attr_image_url = (
+            IMAGE_BASEURL
+            + str(self._current_event.device_id)
+            + "/"
+            + str(self._current_event.event_id)
+            + "/"
+            + str(frame_to_show)
+        )
 
-        return None
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self._attr_image_url) as resp:
+                    if resp.status == 200:
+                        self._cached_image = await resp.read()
+        except Exception:
+            _LOGGER.exception("Failed to fetch image from %s", self._attr_image_url)
+
+        _LOGGER.debug(
+            "Updated image URL %s: %s",
+            self._attr_image_last_updated,
+            self._attr_image_url
+        )
+        self.async_write_ha_state()
+        return self._cached_image
 
     async def stream_source(self) -> str | None:
         """Return the source URL of the video stream."""
