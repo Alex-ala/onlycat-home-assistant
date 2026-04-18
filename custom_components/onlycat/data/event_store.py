@@ -36,9 +36,22 @@ class EventStore:
             },
         )
 
+    async def send_get_event_summary(self, device_id: str, event_id: int, access_token: str) -> None:
+        """Send getEventSummary message to get and subscribe to event summaries for this event."""
+        await self._api_client.send_message(
+            "getEventSummary",
+            {
+                "deviceId": device_id,
+                "eventId": event_id,
+                "accessToken": access_token
+            }
+        )
+
     async def on_device_event_update(self, data: dict) -> None:
         """Handle deviceEventUpdate messages."""
         await self.send_get_event_message(data["deviceId"], data["eventId"])
+        if "body" in data and "accessToken" in data["body"]:
+            await self.send_get_event_summary(data["deviceId"], data["eventId"], data["body"]["accessToken"])
 
     async def on_event_update(self, data: dict) -> None:
         """Handle eventUpdate messages."""
@@ -70,6 +83,9 @@ class EventStore:
         else:
             self._current_events[event.device_id].update_from(event)
         await self.run_listeners(event.device_id)
+    
+    async def on_get_event_summary(self, data: dict) -> None:
+        return
 
     async def run_listeners(self, device_id: str) -> None:
         """Call all listeners for a given device."""

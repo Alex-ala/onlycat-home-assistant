@@ -70,6 +70,9 @@ async def async_setup_entry(
     entry.runtime_data.client.add_event_listener(
         "getEvent", entry.runtime_data.event_store.on_get_event
     )
+    entry.runtime_data.client.add_event_listener(
+        "getEventSummary", entry.runtime_data.event_store.on_get_event_summary
+    )
 
     async def refresh_subscriptions(args: dict | None) -> None:
         _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)
