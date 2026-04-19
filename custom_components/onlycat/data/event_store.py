@@ -43,7 +43,8 @@ class EventStore:
             {
                 "deviceId": device_id,
                 "eventId": event_id,
-                "accessToken": access_token
+                "accessToken": access_token,
+                "subscribe": True
             }
         )
 
@@ -83,7 +84,7 @@ class EventStore:
         else:
             self._current_events[event.device_id].update_from(event)
         await self.run_listeners(event.device_id)
-    
+
     async def on_get_event_summary(self, data: dict) -> None:
         return
 
