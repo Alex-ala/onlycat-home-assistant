@@ -98,7 +98,6 @@ class EventStore:
             or summary.device_id not in self._current_events
             or self._current_events[summary.device_id].event_id != summary.event_id
         ):
-            _LOGGER.warning("Received event summary for unknown event/device: %s", data)
             return
         self._current_events[summary.device_id].summary = summary
 
@@ -117,7 +116,10 @@ class EventStore:
                 "Received event summary update for unknown event/device: %s", data
             )
             return
-        self._current_events[summary.device_id].summary.update_from(summary)
+        if self._current_events[summary.device_id].summary is None:
+            self._current_events[summary.device_id].summary = summary
+        else:
+            self._current_events[summary.device_id].summary.update_from(summary)
 
     async def run_listeners(self, device_id: str) -> None:
         """Call all listeners for a given device."""
