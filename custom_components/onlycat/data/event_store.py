@@ -6,6 +6,7 @@ from collections.abc import Callable
 from custom_components.onlycat.api import OnlyCatApiClient
 
 from .event import Event, EventUpdate
+from .event_summary import EventSummary
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,23 +37,27 @@ class EventStore:
             },
         )
 
-    async def send_get_event_summary(self, device_id: str, event_id: int, access_token: str) -> None:
-        """Send getEventSummary message to get and subscribe to event summaries for this event."""
+    async def send_get_event_summary(
+        self, device_id: str, event_id: int, access_token: str
+    ) -> None:
+        """Send getEventSummary message and subscribe."""
         await self._api_client.send_message(
             "getEventSummary",
             {
                 "deviceId": device_id,
                 "eventId": event_id,
                 "accessToken": access_token,
-                "subscribe": True
-            }
+                "subscribe": True,
+            },
         )
 
     async def on_device_event_update(self, data: dict) -> None:
         """Handle deviceEventUpdate messages."""
         await self.send_get_event_message(data["deviceId"], data["eventId"])
         if "body" in data and "accessToken" in data["body"]:
-            await self.send_get_event_summary(data["deviceId"], data["eventId"], data["body"]["accessToken"])
+            await self.send_get_event_summary(
+                data["deviceId"], data["eventId"], data["body"]["accessToken"]
+            )
 
     async def on_event_update(self, data: dict) -> None:
         """Handle eventUpdate messages."""
@@ -86,7 +91,33 @@ class EventStore:
         await self.run_listeners(event.device_id)
 
     async def on_get_event_summary(self, data: dict) -> None:
-        return
+        """Handle replies from getEventSummary messages."""
+        summary = EventSummary.from_api_response(data)
+        if (
+            not summary
+            or summary.device_id not in self._current_events
+            or self._current_events[summary.device_id].event_id != summary.event_id
+        ):
+            _LOGGER.warning("Received event summary for unknown event/device: %s", data)
+            return
+        self._current_events[summary.device_id].summary = summary
+
+    async def on_event_summary_update(self, data: dict) -> None:
+        """Handle eventSummaryUpdate messages."""
+        if "body" not in data:
+            _LOGGER.warning("Received event summary update with no body: %s", data)
+            return
+        summary = EventSummary.from_api_response(data["body"])
+        if (
+            not summary
+            or summary.device_id not in self._current_events
+            or self._current_events[summary.device_id].event_id != summary.event_id
+        ):
+            _LOGGER.warning(
+                "Received event summary update for unknown event/device: %s", data
+            )
+            return
+        self._current_events[summary.device_id].summary.update_from(summary)
 
     async def run_listeners(self, device_id: str) -> None:
         """Call all listeners for a given device."""
