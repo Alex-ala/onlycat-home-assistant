@@ -116,7 +116,11 @@ class EventStore:
                 "Received event summary update for unknown event/device: %s", data
             )
             return
-        if self._current_events[summary.device_id].summary is None:
+
+        if self._current_events[summary.device_id].summary is None or (
+            isinstance(self._current_events[summary.device_id].summary, list)
+            and len(self._current_events[summary.device_id].summary) == 0
+        ):
             self._current_events[summary.device_id].summary = summary
         else:
             self._current_events[summary.device_id].summary.update_from(summary)
