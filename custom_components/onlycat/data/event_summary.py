@@ -37,10 +37,7 @@ class EventSummary:
         """Create an Event instance from API response data."""
         timestamp_str = api_summary.get("timestamp")
         api_summary = api_summary.get("body", api_summary)
-        if (
-            "deviceId" not in api_summary
-            or "eventId" not in api_summary
-        ):
+        if "deviceId" not in api_summary or "eventId" not in api_summary:
             return None
         device_id = api_summary.get("deviceId")
         event_id = api_summary.get("eventId")
@@ -72,8 +69,6 @@ class EventSummary:
             subevent.action = subevent_data.get("action")
 
             subevents.append(subevent)
-        _LOGGER.warning("Timestamp raw: %s", timestamp_str)
-        _LOGGER.warning("Timestamp parsed: %s", datetime.fromisoformat(timestamp_str))
         return cls(
             device_id=device_id,
             event_id=event_id,
@@ -92,7 +87,4 @@ class EventSummary:
         for obj_field in fields(self):
             new_value = getattr(updated_summary, obj_field.name, None)
             if new_value is not None:
-                if obj_field.name == "subevents":
-                    old_value = getattr(self, obj_field.name) or []
-                    new_value = old_value + list(set(new_value) - set(old_value))
                 setattr(self, obj_field.name, new_value)

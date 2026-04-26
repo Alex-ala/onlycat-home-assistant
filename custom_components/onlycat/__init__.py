@@ -168,21 +168,13 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
                 "getRfidProfile", {"deviceId": device.device_id, "rfidCode": rfid_code}
             )
             label = rfid_profile.get("label", rfid_code)
-            pet = Pet(device, rfid_code, last_seen, label=label)
-            _LOGGER.debug(
-                "Found Pet %s for device %s",
-                label or rfid_code,
-                device.device_id,
+            #TODO: Is there a const for "unknown"?
+            pet = Pet(rfid_code, location="unknown", last_seen=last_seen, label=label)
+            entry.runtime_data.event_store.add_pet(pet)
+        for event in events:
+            await entry.runtime_data.event_store.send_get_event_message(
+                device.device_id, event.event_id, subscribe=False
             )
-            entry.runtime_data.pets.append(pet)
-
-            # Get last seen event to determine current presence state
-            for event in events:
-                if event.rfid_codes and pet.rfid_code in event.rfid_codes:
-                    pet.last_seen_event = event
-                    summary = await entry.runtime_data.event_store.send_get_event_summary(event.device_id, event.event_id, event.access_token)
-
-
 
 
 async def async_unload_entry(

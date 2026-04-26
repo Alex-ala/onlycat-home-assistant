@@ -6,12 +6,8 @@ import logging
 from dataclasses import dataclass, fields
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING
 
 from .type import Type
-
-if TYPE_CHECKING:
-    from .event_summary import EventSummary
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,7 +89,6 @@ class Event:
     poster_frame_index: int | None = None
     access_token: str | None = None
     rfid_codes: list[str] | None = None
-    summary: EventSummary | None = None
 
     @classmethod
     def from_api_response(cls, api_event: dict) -> Event | None:
@@ -126,7 +121,7 @@ class Event:
         if updated_event is None:
             return
         for field in fields(self):
-            new_value = getattr(updated_event, field.name, []) or []
+            new_value = getattr(updated_event, field.name)
             if new_value is not None:
                 if field.name == "rfid_codes":
                     old_value = getattr(self, field.name) or []
