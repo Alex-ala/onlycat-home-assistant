@@ -108,7 +108,7 @@ async def async_setup_entry(
     await async_setup_services(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     for device in entry.runtime_data.devices:
-        await entry.runtime_data.event_store.run_listeners(device.device_id)
+        await entry.runtime_data.event_store.run_event_listeners(device.device_id)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
@@ -180,7 +180,9 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
             for event in events:
                 if event.rfid_codes and pet.rfid_code in event.rfid_codes:
                     pet.last_seen_event = event
-                    break
+                    summary = await entry.runtime_data.event_store.send_get_event_summary(event.device_id, event.event_id, event.access_token)
+
+
 
 
 async def async_unload_entry(

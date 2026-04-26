@@ -17,6 +17,7 @@ class EventStore:
     def __init__(self, api_client: OnlyCatApiClient) -> None:
         """Initialize EventStore with given api client."""
         self._event_update_listeners: dict[str, list[Callable]] = {}
+        self._event_summary_update_listeners: dict[str, list[Callable]] = {}
         self._current_events: dict[str, Event] = {}
         self._current_images: dict[str, bytes] = {}
         self._api_client: OnlyCatApiClient = api_client
@@ -75,7 +76,7 @@ class EventStore:
                 update.device_id, update.event_id, subscribe=False
             )
             return
-        await self.run_listeners(update.device_id)
+        await self.run_event_listeners(update.device_id)
 
     async def on_get_event(self, data: dict) -> None:
         """Handle replies from getEvent messages."""
@@ -88,7 +89,7 @@ class EventStore:
             self._current_events[event.device_id] = event
         else:
             self._current_events[event.device_id].update_from(event)
-        await self.run_listeners(event.device_id)
+        await self.run_event_listeners(event.device_id)
 
     async def on_get_event_summary(self, data: dict) -> None:
         """Handle replies from getEventSummary messages."""
@@ -106,7 +107,7 @@ class EventStore:
         if "body" not in data:
             _LOGGER.warning("Received event summary update with no body: %s", data)
             return
-        summary = EventSummary.from_api_response(data["body"])
+        summary = EventSummary.from_api_response(data)
         if (
             not summary
             or summary.device_id not in self._current_events
@@ -124,8 +125,9 @@ class EventStore:
             self._current_events[summary.device_id].summary = summary
         else:
             self._current_events[summary.device_id].summary.update_from(summary)
+        await self.run_summary_listeners(summary.device_id)
 
-    async def run_listeners(self, device_id: str) -> None:
+    async def run_event_listeners(self, device_id: str) -> None:
         """Call all listeners for a given device."""
         if device_id not in self._event_update_listeners:
             return
@@ -134,11 +136,26 @@ class EventStore:
             for callback in self._event_update_listeners[device_id]:
                 await callback(event)
 
+    async def run_summary_listeners(self, device_id: str) -> None:
+        """Call all event summary listeners for a given device."""
+        if device_id not in self._event_summary_update_listeners:
+            return
+        event = self._current_events.get(device_id, None)
+        if event is not None and event.summary is not None and event.summary:
+            for callback in self._event_summary_update_listeners[device_id]:
+                await callback(event.summary)
+
     def add_event_listener(self, device_id: str, callback: Callable) -> None:
         """Add function to a devices listener list."""
         if device_id not in self._event_update_listeners:
             self._event_update_listeners[device_id] = []
         self._event_update_listeners[device_id].append(callback)
+
+    def add_event_summary_listener(self, device_id: str, callback: Callable) -> None:
+        """Add function to a devices event summary listener list."""
+        if device_id not in self._event_summary_update_listeners:
+            self._event_summary_update_listeners[device_id] = []
+        self._event_summary_update_listeners[device_id].append(callback)
 
     def get_current_image(self, device_id: str) -> bytes | None:
         """Return cached image for given device."""

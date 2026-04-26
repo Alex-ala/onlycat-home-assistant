@@ -14,7 +14,6 @@ from homeassistant.const import STATE_HOME, STATE_NOT_HOME
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
-from .data.event import Event
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,8 +23,8 @@ if TYPE_CHECKING:
 
     from .data import OnlyCatConfigEntry
     from .data.device import Device
-    from .data.event import Event
     from .data.event_store import EventStore
+    from .data.event_summary import EventSummary
     from .data.pet import Pet
 
 
@@ -69,12 +68,6 @@ class OnlyCatPetTracker(TrackerEntity):
             serial_number=self.device.device_id,
         )
 
-    def determine_new_state(self, event: Event) -> None:
-        """Determine the new state of the sensor based on the event."""
-        present = self.pet.is_present(event)
-        if present is not None:
-            self._attr_location_name = STATE_HOME if present else STATE_NOT_HOME
-
     def __init__(
         self,
         pet: Pet,
@@ -98,17 +91,27 @@ class OnlyCatPetTracker(TrackerEntity):
         )
         self.entity_id = "device_tracker." + self._attr_unique_id
         self._attr_location_name = STATE_NOT_HOME
-        if pet.last_seen_event:
-            self.determine_new_state(pet.last_seen_event)
-        self._event_store.add_event_listener(
-            self.device.device_id, self.on_event_update
+        if pet.last_seen_event and pet.last_seen_event.summary:
+            self.on_summary_update(pet.last_seen_event.summary)
+        self._event_store.add_event_summary_listener(
+            self.device.device_id, self.on_summary_update
         )
 
-    async def on_event_update(self, event: Event) -> None:
-        """Handle event update event."""
-        if event.rfid_codes is None or self.pet.rfid_code not in event.rfid_codes:
-            return
-        self.determine_new_state(event)
+    async def on_summary_update(self, summary: EventSummary) -> None:
+        """Handle event summary update event."""
+        for subevent in summary.subevents:
+            if (
+                subevent.rfid_code is not None
+                and self.pet.rfid_code == subevent.rfid_code
+            ):
+                self._attr_extra_state_attributes = {"last_seen": summary.timestamp}
+                if subevent.action == "TRANSIT":
+                    if subevent.direction == "INWARD":
+                        _LOGGER.debug("Setting location for %s to HOME based on event summary update", self.pet_name)
+                        self._attr_location_name = STATE_HOME
+                    elif subevent.direction == "OUTWARD":
+                        _LOGGER.debug("Setting location for %s to NOT_HOME based on event summary update", self.pet_name)
+                        self._attr_location_name = STATE_NOT_HOME
         self.async_write_ha_state()
 
     async def manual_update_location(self, location: str) -> None:

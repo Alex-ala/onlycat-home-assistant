@@ -9,7 +9,7 @@ from datetime import UTC, datetime, tzinfo
 from typing import TYPE_CHECKING
 
 from .event import EventTriggerSource
-from .pet import PolicyResult
+from .policy import PolicyResult
 from .type import Type
 
 if TYPE_CHECKING:

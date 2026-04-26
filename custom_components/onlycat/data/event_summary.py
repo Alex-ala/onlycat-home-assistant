@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field, fields
+from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,13 +30,15 @@ class EventSummary:
     invalidated_at: None = None
     processing_at: None = None
     processing_by: None = None
+    timestamp: datetime | None = None
 
     @classmethod
     def from_api_response(cls, api_summary: dict) -> EventSummary | None:
         """Create an Event instance from API response data."""
+        timestamp_str = api_summary.get("timestamp")
+        api_summary = api_summary.get("body", api_summary)
         if (
-            not api_summary
-            or "deviceId" not in api_summary
+            "deviceId" not in api_summary
             or "eventId" not in api_summary
         ):
             return None
@@ -69,7 +72,8 @@ class EventSummary:
             subevent.action = subevent_data.get("action")
 
             subevents.append(subevent)
-
+        _LOGGER.warning("Timestamp raw: %s", timestamp_str)
+        _LOGGER.warning("Timestamp parsed: %s", datetime.fromisoformat(timestamp_str))
         return cls(
             device_id=device_id,
             event_id=event_id,
@@ -78,6 +82,7 @@ class EventSummary:
             invalidated_at=invalidated_at,
             processing_at=processing_at,
             processing_by=processing_by,
+            timestamp=datetime.fromisoformat(timestamp_str) if timestamp_str else None,
         )
 
     def update_from(self, updated_summary: EventSummary) -> None:
