@@ -83,5 +83,7 @@ class OnlyCatPetTracker(TrackerEntity):
         if location not in (STATE_HOME, STATE_NOT_HOME):
             _LOGGER.debug("Manual update of location cannot be set to %s", location)
             return
+        # TODO: Test if this really works
+        self.pet.location = location
         self._attr_location_name = location
         self.async_write_ha_state()
