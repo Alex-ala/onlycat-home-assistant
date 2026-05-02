@@ -75,7 +75,6 @@ class OnlyCatEventSensor(BinarySensorEntity):
                 event.event_id,
             )
             self._attr_is_on = True
-        _LOGGER.warning("REMOVE DEBUG: EVENT %s", event)
         self._attr_extra_state_attributes = {
             "eventId": event.event_id,
             "timestamp": event.timestamp,

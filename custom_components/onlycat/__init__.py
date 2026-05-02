@@ -20,6 +20,7 @@ from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
 from .data.device import Device
 from .data.event import Event
 from .data.event_store import EventStore
+from .data.event_summary import EventSummary
 from .data.pet import Pet
 from .services import async_setup_services
 
@@ -109,6 +110,8 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     for device in entry.runtime_data.devices:
         await entry.runtime_data.event_store.run_event_listeners(device.device_id)
+    for pet in entry.runtime_data.event_store.get_pets():
+        await entry.runtime_data.event_store.run_pet_listeners(pet.rfid_code)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
@@ -155,26 +158,49 @@ async def _initialize_pets(entry: OnlyCatConfigEntry) -> None:
                 "getDeviceEvents", {"deviceId": device.device_id}
             )
         ]
+        events.sort(
+            key=lambda e: e.timestamp,
+            reverse=True,
+        )
         rfids = await entry.runtime_data.client.send_message(
             "getLastSeenRfidCodesByDevice", {"deviceId": device.device_id}
         )
         for rfid in rfids:
             rfid_code = rfid["rfidCode"]
-            try:
-                last_seen = datetime.fromisoformat(rfid["timestamp"])
-            except TypeError:
-                last_seen = None
             rfid_profile = await entry.runtime_data.client.send_message(
                 "getRfidProfile", {"deviceId": device.device_id, "rfidCode": rfid_code}
             )
             label = rfid_profile.get("label", rfid_code)
-            #TODO: Is there a const for "unknown"?
-            pet = Pet(rfid_code, location="unknown", last_seen=last_seen, label=label)
+            # TODO: Is there a const for "unknown"?
+            pet = Pet(rfid_code, location="unknown", last_seen=None, label=label)
             entry.runtime_data.event_store.add_pet(pet)
-        for event in events:
-            await entry.runtime_data.event_store.send_get_event_message(
-                device.device_id, event.event_id, subscribe=False
+            # TODO: Add option to enable/disable initial pet location setup
+            latest_event = next(
+                (event for event in events if rfid_code in event.rfid_codes or []), None
             )
+            if (
+                latest_event
+                and latest_event.timestamp
+                and (not pet.last_seen or latest_event.timestamp > pet.last_seen)
+            ):
+                pet.last_seen = latest_event.timestamp
+                pet.last_seen_event = latest_event
+                raw_summary = (
+                    await entry.runtime_data.event_store.send_get_event_summary(
+                        latest_event.device_id,
+                        latest_event.event_id,
+                        latest_event.access_token,
+                        subscribe=False,
+                    )
+                )
+                summary = EventSummary.from_api_response(raw_summary)
+                for subevent in summary.subevents:
+                    if subevent.rfid_code:
+                        pet = entry.runtime_data.event_store.get_pet_by_rfid(
+                            subevent.rfid_code
+                        )
+                        pet.last_seen_summary = summary
+                        pet.update_from_subevent(subevent)
 
 
 async def async_unload_entry(

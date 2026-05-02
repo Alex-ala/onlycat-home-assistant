@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Callable
+from typing import Any
 
 from custom_components.onlycat.api import OnlyCatApiClient
 from custom_components.onlycat.data.pet import Pet
@@ -43,18 +44,23 @@ class EventStore:
         )
 
     async def send_get_event_summary(
-        self, device_id: str, event_id: int, access_token: str
-    ) -> None:
+        self,
+        device_id: str,
+        event_id: int,
+        access_token: str,
+        subscribe: bool = True,  # noqa: FBT001,FBT002
+    ) -> Any:
         """Send getEventSummary message and subscribe."""
-        await self._api_client.send_message(
+        reply = await self._api_client.send_message(
             "getEventSummary",
             {
                 "deviceId": device_id,
                 "eventId": event_id,
                 "accessToken": access_token,
-                "subscribe": True,
+                "subscribe": subscribe,
             },
         )
+        return reply
 
     async def on_device_event_update(self, data: dict) -> None:
         """Handle deviceEventUpdate messages."""
@@ -74,14 +80,11 @@ class EventStore:
                 update.device_id, update.event_id, subscribe=False
             )
         else:
-            _LOGGER.debug("REMOVE oneventupdate pre change %s", update)
             await self.on_get_event(update.event)
 
     async def on_get_event(self, data: dict | Event) -> None:
         """Handle replies from getEvent messages."""
         event = Event.from_api_response(data) if isinstance(data, dict) else data
-        _LOGGER.debug("REMOVE onevent pre change %s", self._current_events.get(event.device_id, "None"))
-        _LOGGER.debug("REMOVE onevent change %s", event)
         if not event:
             return
         if event.device_id not in self._current_events:
@@ -92,11 +95,14 @@ class EventStore:
             self._current_events[event.device_id].update_from(event)
         for rfid_code in event.rfid_codes:
             pet = self.get_pet_by_rfid(rfid_code)
-            if pet:
+            if (
+                pet
+                and event.timestamp is not None
+                and (pet.last_seen is None or pet.last_seen < event.timestamp)
+            ):
                 pet.last_seen = event.timestamp
                 pet.last_seen_event = event
                 await self.run_pet_listeners(pet.rfid_code)
-        _LOGGER.debug("REMOVE onevent post change %s", self._current_events[event.device_id])
         await self.run_event_listeners(event.device_id)
 
     async def on_get_event_summary(self, data: dict) -> None:
@@ -114,8 +120,16 @@ class EventStore:
         for subevent in summary.subevents:
             if subevent.rfid_code:
                 pet = self.get_pet_by_rfid(subevent.rfid_code)
-                if pet:
+                if (
+                    pet
+                    and summary.timestamp is not None
+                    and (
+                        pet.last_seen_summary is None
+                        or pet.last_seen_summary < summary.timestamp
+                    )
+                ):
                     pet.last_seen_summary = summary
+                    pet.last_seen = summary.timestamp
                     pet.update_from_subevent(subevent)
                     await self.run_pet_listeners(pet.rfid_code)
         await self.run_summary_listeners(summary.device_id)
@@ -166,6 +180,12 @@ class EventStore:
             self._event_summary_update_listeners[device_id] = []
         self._event_summary_update_listeners[device_id].append(callback)
 
+    def add_pet_listener(self, rfid_code: str, callback: Callable) -> None:
+        """Add function to a pets listener list."""
+        if rfid_code not in self._pet_update_listeners:
+            self._pet_update_listeners[rfid_code] = []
+        self._pet_update_listeners[rfid_code].append(callback)
+
     def get_current_image(self, device_id: str) -> bytes | None:
         """Return cached image for given device."""
         return self._current_images.get(device_id, None)
@@ -178,10 +198,15 @@ class EventStore:
         """Return pet with given RFID code, or None if not found."""
         pet = self._pets.get(rfid_code, None)
         if pet is None:
-            self.add_pet(Pet(rfid_code=rfid_code, last_seen=None))
+            # TODO: Is theere a const for "unknown"?
+            self.add_pet(Pet(rfid_code=rfid_code, location="unknown", last_seen=None))
             pet = self._pets[rfid_code]
         return pet
 
     def add_pet(self, pet: Pet) -> None:
         """Add pet to store."""
         self._pets[pet.rfid_code] = pet
+
+    def get_pets(self) -> list[Pet]:
+        """Return list of all pets in store."""
+        return list(self._pets.values())

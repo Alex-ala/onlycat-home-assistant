@@ -37,14 +37,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the tracker platform."""
-    if entry.runtime_data.pets:
-        async_add_entities(
-            sensor
-            for pet in entry.runtime_data.pets
-            for sensor in (
-                OnlyCatPetTracker(pet=pet, event_store=entry.runtime_data.event_store),
-            )
-        )
+    async_add_entities(
+        OnlyCatPetTracker(pet=pet, event_store=entry.runtime_data.event_store)
+        for pet in entry.runtime_data.event_store.get_pets()
+    )
 
 
 class OnlyCatPetTracker(TrackerEntity):
@@ -68,15 +64,19 @@ class OnlyCatPetTracker(TrackerEntity):
         self._attr_translation_placeholders = {
             "pet_name": self.pet_name,
         }
-        self._attr_unique_id = (
-            self.device.device_id.replace("-", "_").lower()
-            + "_"
-            + pet.rfid_code
-            + "_tracker"
-        )
+        self._attr_unique_id = pet.rfid_code + "_tracker"
         self.entity_id = "device_tracker." + self._attr_unique_id
         self._attr_location_name = STATE_NOT_HOME
-        # TODO: Listen to pet updates
+        self._event_store.add_pet_listener(pet.rfid_code, self.on_pet_update)
+
+    async def on_pet_update(self, pet: Pet) -> None:
+        """Handle updates to the pet data."""
+        if pet.rfid_code != self.pet.rfid_code:
+            return
+        self.pet = pet
+        self._attr_location_name = pet.location
+        self._attr_last_seen = pet.last_seen
+        self.async_write_ha_state()
 
     async def manual_update_location(self, location: str) -> None:
         """Manually override current state of a pets device tracker."""

@@ -39,4 +39,8 @@ class Pet:
                 self.location = "not_home"
             else:
                 self.location = "home"
-        _LOGGER.debug("Updated pet %s location to %s based on subevent", self.rfid_code, self.location)
+        _LOGGER.debug(
+            "Updated pet %s location to %s based on subevent",
+            self.rfid_code,
+            self.location,
+        )
