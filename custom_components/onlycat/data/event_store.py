@@ -4,6 +4,8 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
+from homeassistant.const import STATE_UNKNOWN
+
 from custom_components.onlycat.api import OnlyCatApiClient
 from custom_components.onlycat.data.pet import Pet
 
@@ -51,7 +53,7 @@ class EventStore:
         subscribe: bool = True,  # noqa: FBT001,FBT002
     ) -> Any:
         """Send getEventSummary message and subscribe."""
-        reply = await self._api_client.send_message(
+        return await self._api_client.send_message(
             "getEventSummary",
             {
                 "deviceId": device_id,
@@ -60,7 +62,6 @@ class EventStore:
                 "subscribe": subscribe,
             },
         )
-        return reply
 
     async def on_device_event_update(self, data: dict) -> None:
         """Handle deviceEventUpdate messages."""
@@ -198,8 +199,9 @@ class EventStore:
         """Return pet with given RFID code, or None if not found."""
         pet = self._pets.get(rfid_code, None)
         if pet is None:
-            # TODO: Is theere a const for "unknown"?
-            self.add_pet(Pet(rfid_code=rfid_code, location="unknown", last_seen=None))
+            self.add_pet(
+                Pet(rfid_code=rfid_code, location=STATE_UNKNOWN, last_seen=None)
+            )
             pet = self._pets[rfid_code]
         return pet
 

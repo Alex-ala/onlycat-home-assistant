@@ -6,6 +6,14 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from homeassistant.const import STATE_HOME, STATE_NOT_HOME
+
+from .const import (
+    ONLYCAT_DIRECTION_INWARD,
+    ONLYCAT_DIRECTION_OUTWARD,
+    ONLYCAT_SUBEVENT_ACTION_TRANSIT,
+)
+
 if TYPE_CHECKING:
     from datetime import datetime
 
@@ -28,17 +36,16 @@ class Pet:
 
     def update_from_subevent(self, subevent: SubEvent) -> None:
         """Update pet data from a subevent."""
-        # TODO: Remove these static strings
-        if subevent.direction == "INWARD":
-            if subevent.action == "TRANSIT":
-                self.location = "home"
+        if subevent.direction == ONLYCAT_DIRECTION_INWARD:
+            if subevent.action == ONLYCAT_SUBEVENT_ACTION_TRANSIT:
+                self.location = STATE_HOME
             else:
-                self.location = "not_home"
-        elif subevent.direction == "OUTWARD":
-            if subevent.action == "TRANSIT":
-                self.location = "not_home"
+                self.location = STATE_NOT_HOME
+        elif subevent.direction == ONLYCAT_DIRECTION_OUTWARD:
+            if subevent.action == ONLYCAT_SUBEVENT_ACTION_TRANSIT:
+                self.location = STATE_NOT_HOME
             else:
-                self.location = "home"
+                self.location = STATE_HOME
         _LOGGER.debug(
             "Updated pet %s location to %s based on subevent",
             self.rfid_code,

@@ -18,6 +18,31 @@ class SubEvent:
     direction: str
     action: str
 
+    @classmethod
+    def from_api_response(cls, api_subevent: dict) -> SubEvent | None:
+        """Create a SubEvent instance from API response data."""
+        if not all(
+            key in api_subevent
+            for key in (
+                "startFrameIndex",
+                "endFrameIndex",
+                "rfidCode",
+                "direction",
+                "action",
+            )
+        ):
+            _LOGGER.warning(
+                "Skipping incomplete subevent in API response: %s", api_subevent
+            )
+            return None
+        subevent = cls()
+        subevent.start_frame_index = api_subevent["startFrameIndex"]
+        subevent.end_frame_index = api_subevent["endFrameIndex"]
+        subevent.rfid_code = api_subevent.get("rfidCode")
+        subevent.direction = api_subevent.get("direction")
+        subevent.action = api_subevent.get("action")
+        return subevent
+
 
 @dataclass
 class EventSummary:
@@ -47,28 +72,9 @@ class EventSummary:
         processing_by = api_summary.get("processingBy")
         subevents = []
         for subevent_data in api_summary.get("subevents", []):
-            if not all(
-                key in subevent_data
-                for key in (
-                    "startFrameIndex",
-                    "endFrameIndex",
-                    "rfidCode",
-                    "direction",
-                    "action",
-                )
-            ):
-                _LOGGER.warning(
-                    "Skipping incomplete subevent in event summary: %s", subevent_data
-                )
-                continue
-            subevent = SubEvent()
-            subevent.start_frame_index = subevent_data["startFrameIndex"]
-            subevent.end_frame_index = subevent_data["endFrameIndex"]
-            subevent.rfid_code = subevent_data.get("rfidCode")
-            subevent.direction = subevent_data.get("direction")
-            subevent.action = subevent_data.get("action")
-
-            subevents.append(subevent)
+            subevent = SubEvent.from_api_response(subevent_data)
+            if subevent:
+                subevents.append(subevent)
         return cls(
             device_id=device_id,
             event_id=event_id,
