@@ -1,19 +1,22 @@
-"""Image platform for OnlyCat."""
+"""Camera platform for OnlyCat."""
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
-from homeassistant.components.image import ImageEntity, ImageEntityDescription
+from homeassistant.components.camera import (
+    Camera,
+    CameraEntityDescription,
+    CameraEntityFeature,
+    StreamType,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
-from .data.event import Event
-
-_LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -21,15 +24,19 @@ if TYPE_CHECKING:
 
     from .data.__init__ import OnlyCatConfigEntry
     from .data.device import Device
+    from .data.event import Event
     from .data.event_store import EventStore
 
-ENTITY_DESCRIPTION = ImageEntityDescription(
-    key="OnlyCat",
-    name="Last activity image",
-    translation_key="onlycat_last_activity_image",
-)
+_LOGGER = logging.getLogger(__name__)
 
-IMAGE_BASEURL = "https://gateway.onlycat.com/events/"
+VIDEO_BASEURL = "https://gateway.onlycat.com/sharing/video/"
+THUMB_BASEURL = "https://gateway.onlycat.com/events/"
+
+ENTITY_DESCRIPTION = CameraEntityDescription(
+    key="OnlyCat",
+    name="Last activity video",
+    translation_key="onlycat_last_activity_video",
+)
 
 
 async def async_setup_entry(
@@ -37,21 +44,26 @@ async def async_setup_entry(
     entry: OnlyCatConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the image platform."""
-    entities = [
-        OnlyCatLastImage(
+    """Set up the camera platform."""
+    if not hasattr(entry.runtime_data, "camera_entities"):
+        entry.runtime_data.camera_entities = {}
+
+    entities: list[OnlyCatLastVideo] = [
+        OnlyCatLastVideo(
             hass=hass, device=device, event_store=entry.runtime_data.event_store
         )
         for device in entry.runtime_data.devices
     ]
+
     async_add_entities(entities)
 
 
-class OnlyCatLastImage(ImageEntity):
-    """OnlyCat image class."""
+class OnlyCatLastVideo(Camera):
+    """OnlyCat camera class for last activity video."""
 
     _attr_has_entity_name = True
-    _attr_content_type = "image/jpeg"
+    _attr_supported_features = CameraEntityFeature.STREAM
+    _attr_frontend_stream_type = StreamType.HLS
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -65,24 +77,28 @@ class OnlyCatLastImage(ImageEntity):
     def __init__(
         self, hass: HomeAssistant, device: Device, event_store: EventStore
     ) -> None:
-        """Initialize the sensor class."""
-        ImageEntity.__init__(self, hass)
-        self.entity_description = ENTITY_DESCRIPTION
+        """Initialize the camera entity."""
+        super().__init__()
+        self.hass = hass
         self.device: Device = device
-        self._current_event: Event = Event()
+        self.entity_description = ENTITY_DESCRIPTION
+        self._current_event: Event | None = None
         self._attr_unique_id = (
-            device.device_id.replace("-", "_").lower() + "_last_activity_image"
+            device.device_id.replace("-", "_").lower() + "_last_activity_video"
         )
         self._event_store = event_store
-        self.entity_id = "image." + self._attr_unique_id
-        self._attr_image_url: str = ""
+        self.entity_id = "camera." + self._attr_unique_id
         self._cached_image: bytes | None = None
         self._event_store.add_event_listener(
             self.device.device_id, self.on_event_update
         )
 
-    async def async_image(self) -> bytes | None:
-        """Return the cached image from eventstore."""
+    async def async_camera_image(
+        self,
+        width: int | None = None,  # noqa: ARG002
+        height: int | None = None,  # noqa: ARG002
+    ) -> bytes | None:
+        """Return a thumbnail image for the camera preview."""
         image = self._event_store.get_current_image(self.device.device_id)
         if image is None and self._current_event is not None:
             frame_to_show = (
@@ -93,7 +109,7 @@ class OnlyCatLastImage(ImageEntity):
                 else 1
             )
             url = (
-                f"{IMAGE_BASEURL}"
+                f"{THUMB_BASEURL}"
                 f"{self._current_event.device_id}/"
                 f"{self._current_event.event_id}/"
                 f"{frame_to_show}"
@@ -105,15 +121,31 @@ class OnlyCatLastImage(ImageEntity):
                     self._event_store.set_current_image(self.device.device_id, image)
         return image
 
+    async def stream_source(self) -> str | None:
+        """Return the source URL of the video stream."""
+        if not self._current_event or not self._current_event.access_token:
+            return None
+        event = self._current_event
+        return (
+            f"{VIDEO_BASEURL}{event.device_id}/{event.event_id}?t={event.access_token}"
+        )
+
     async def on_event_update(self, event: Event) -> None:
         """Handle event update."""
-        if event is None or (
+        if (
             self._current_event
             and self._current_event.event_id is not None
             and event.event_id is not None
             and event.event_id < self._current_event.event_id
         ):
             return
-        self._current_event = event
-        self.image_last_updated = self._current_event.timestamp
-        self.async_write_ha_state()
+        if self._current_event and self._current_event.event_id == event.event_id:
+            self._current_event = event
+            self.async_write_ha_state()
+        else:
+            if hasattr(self, "stream") and self.stream:
+                with contextlib.suppress(Exception):
+                    self.stream.stop()
+                self.stream = None
+            self._current_event = event
+            self.async_write_ha_state()

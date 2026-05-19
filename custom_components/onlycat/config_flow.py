@@ -23,6 +23,7 @@ from .const import (
     CONF_POLL_INTERVAL_HOURS,
     DOMAIN,
     LOGGER,
+    ONLYCAT_API_STATUS_CODES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for OnlyCat."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self,
@@ -117,7 +118,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): selector.BooleanSelector(),
                     vol.Required(
                         CONF_POLL_INTERVAL_HOURS,
-                        default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 6),
+                        default=(user_input or {}).get(CONF_POLL_INTERVAL_HOURS, 1),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=1,
@@ -147,7 +148,7 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         settings = {
             "ignore_flap_motion_rules": False,
             "ignore_motion_sensor_rules": False,
-            "poll_interval_hours": 6,
+            "poll_interval_hours": 1,
             "enable_detailed_metrics": False,
         }
         if user_input is not None and config_entry is not None:
@@ -210,5 +211,12 @@ class OnlyCatFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _validate_connection(self, client: OnlyCatApiClient) -> None:
         """Validate connection."""
         await client.connect()
-        await client.send_message("getDevices", {"subscribe": False})
+        response = await client.send_message("getDevices", {"subscribe": False})
+        if (
+            type(response) is dict
+            and "code" in response
+            and response["code"] == ONLYCAT_API_STATUS_CODES["UNAUTHORIZED"]
+        ):
+            error_msg = "Invalid access token"
+            raise OnlyCatApiClientAuthenticationError(error_msg)
         await client.disconnect()

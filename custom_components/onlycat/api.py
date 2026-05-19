@@ -66,13 +66,16 @@ class OnlyCatApiClient:
             return
         _LOGGER.debug("Connecting to API")
 
-        await self._socket.connect(
-            ONLYCAT_URL,
-            transports=["websocket"],
-            namespaces="/",
-            headers={"platform": "home-assistant", "device": "onlycat-hass"},
-            auth={"token": self._token},
-        )
+        try:
+            await self._socket.connect(
+                ONLYCAT_URL,
+                transports=["websocket"],
+                namespaces="/",
+                headers={"platform": "home-assistant", "device": "onlycat-hass"},
+                auth={"token": self._token},
+            )
+        except Exception as exception:
+            raise OnlyCatApiClientError from exception
 
     async def disconnect(self) -> None:
         """Disconnect websocket client."""
@@ -100,8 +103,33 @@ class OnlyCatApiClient:
 
     async def send_message(self, event: str, data: any) -> Any | None:
         """Send a message to the API."""
-        _LOGGER.debug("Sending %s message to API: %s", event, data)
-        return await self._socket.call(event, data)
+        _LOGGER.debug(
+            "Sending message to API - Event: %s, Data: %s, Data Type: %s",
+            event,
+            data,
+            type(data),
+        )
+        try:
+            reply = await self._socket.call(event, data)
+        except Exception as exception:
+            _LOGGER.exception(
+                "Error during socket.call for event %s with data %s", event, data
+            )
+            raise OnlyCatApiClientCommunicationError from exception
+        _LOGGER.debug("Received reply for event %s: %s", event, reply)
+        if reply is None:
+            return None
+        for callback in self._listeners[event]:
+            try:
+                await callback(reply)
+            except Exception:
+                _LOGGER.exception(
+                    "Error while handling reply for event %s with data %s: %s",
+                    event,
+                    data,
+                    reply,
+                )
+        return reply
 
     async def wait(self) -> None:
         """Wait until client is disconnected."""

@@ -49,8 +49,8 @@ class EventFlapstate(Enum):
     """Enum representing the flap state during an OnlyCat flap event."""
 
     CLOSED = 0
-    OPEN_INWARD = 1
-    OPEN_OUTWARD = 2
+    OPEN_OUTWARD = 1
+    OPEN_INWARD = 2
     INVALID = 3
 
     @classmethod
@@ -113,17 +113,19 @@ class Event:
             else None,
             poster_frame_index=api_event.get("posterFrameIndex"),
             access_token=api_event.get("accessToken"),
-            rfid_codes=api_event.get("rfidCodes", []),
+            rfid_codes=api_event.get("rfidCodes") or [],
         )
 
     def update_from(self, updated_event: Event) -> None:
         """Update the event with data from another event instance."""
         if updated_event is None:
             return
-
         for field in fields(self):
-            new_value = getattr(updated_event, field.name, None)
+            new_value = getattr(updated_event, field.name)
             if new_value is not None:
+                if field.name == "rfid_codes":
+                    old_value = getattr(self, field.name) or []
+                    new_value = old_value + list(set(new_value) - set(old_value))
                 setattr(self, field.name, new_value)
 
 
@@ -139,14 +141,22 @@ class EventUpdate:
     @classmethod
     def from_api_response(cls, api_event: dict) -> EventUpdate | None:
         """Create an EventUpdate instance from API response data."""
-        device_id = api_event.get("deviceId", api_event.get("body").get("deviceId"))
-        event_id = api_event.get("eventId", api_event.get("body").get("eventId"))
+        if not api_event:
+            return None
+        body = api_event.get("body") or {}
+        device_id = api_event.get("deviceId", body.get("deviceId"))
+        event_id = api_event.get("eventId", body.get("eventId"))
         event_type = (
             Type(api_event.get("type")) if api_event.get("type") else Type.UNKNOWN
         )
-        event = Event.from_api_response(api_event.get("body"))
+        event = Event.from_api_response(body)
+
+        if event is None:
+            event = Event()
+
         if event.event_id is None:
             event.event_id = event_id
+
         return cls(
             device_id=device_id,
             event_id=event_id,

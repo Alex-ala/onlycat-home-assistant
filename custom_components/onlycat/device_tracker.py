@@ -11,10 +11,6 @@ from homeassistant.components.device_tracker import (
     TrackerEntityDescription,
 )
 from homeassistant.const import STATE_HOME, STATE_NOT_HOME
-from homeassistant.helpers.device_registry import DeviceInfo
-
-from .const import DOMAIN
-from .data.event import Event, EventUpdate
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,10 +18,10 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .api import OnlyCatApiClient
     from .data import OnlyCatConfigEntry
-    from .data.device import Device
+    from .data.event_store import EventStore
     from .data.pet import Pet
+
 
 ENTITY_DESCRIPTION = TrackerEntityDescription(
     key="OnlyCat",
@@ -41,17 +37,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the tracker platform."""
-    if entry.runtime_data.pets:
-        async_add_entities(
-            sensor
-            for pet in entry.runtime_data.pets
-            for sensor in (
-                OnlyCatPetTracker(
-                    pet=pet,
-                    api_client=entry.runtime_data.client,
-                ),
-            )
-        )
+    async_add_entities(
+        OnlyCatPetTracker(pet=pet, event_store=entry.runtime_data.event_store)
+        for pet in entry.runtime_data.event_store.get_pets()
+    )
 
 
 class OnlyCatPetTracker(TrackerEntity):
@@ -61,61 +50,32 @@ class OnlyCatPetTracker(TrackerEntity):
     _attr_should_poll = False
     _attr_source_type = SourceType.ROUTER
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info to map to a device."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.device.device_id)},
-            name=self.device.description,
-            serial_number=self.device.device_id,
-        )
-
-    def determine_new_state(self, event: Event) -> None:
-        """Determine the new state of the sensor based on the event."""
-        present = self.pet.is_present(event)
-        if present is not None:
-            self._attr_location_name = STATE_HOME if present else STATE_NOT_HOME
-
-        if event.frame_count:
-            self._current_event = Event()
-
     def __init__(
         self,
         pet: Pet,
-        api_client: OnlyCatApiClient,
+        event_store: EventStore,
     ) -> None:
         """Initialize the sensor class."""
         self.entity_description = ENTITY_DESCRIPTION
         self._attr_raw_data = None
-        self.device: Device = pet.device
         self.pet: Pet = pet
-        self._current_event: Event = Event()
+        self._event_store = event_store
         self.pet_name = pet.label if pet.label is not None else pet.rfid_code
         self._attr_translation_placeholders = {
             "pet_name": self.pet_name,
         }
-        self._attr_unique_id = (
-            self.device.device_id.replace("-", "_").lower()
-            + "_"
-            + pet.rfid_code
-            + "_tracker"
-        )
-        self._api_client = api_client
-        self.entity_id = "sensor." + self._attr_unique_id
+        self._attr_unique_id = pet.rfid_code + "_tracker"
+        self.entity_id = "device_tracker." + self._attr_unique_id
         self._attr_location_name = STATE_NOT_HOME
-        if pet.last_seen_event:
-            self.determine_new_state(pet.last_seen_event)
+        self._event_store.add_pet_listener(pet.rfid_code, self.on_pet_update)
 
-        api_client.add_event_listener("deviceEventUpdate", self.on_event_update)
-        api_client.add_event_listener("eventUpdate", self.on_event_update)
-
-    async def on_event_update(self, data: dict) -> None:
-        """Handle event update event."""
-        if data["deviceId"] != self.device.device_id:
+    async def on_pet_update(self, pet: Pet) -> None:
+        """Handle updates to the pet data."""
+        if pet.rfid_code != self.pet.rfid_code:
             return
-
-        self._current_event.update_from(EventUpdate.from_api_response(data).event)
-        self.determine_new_state(self._current_event)
+        self.pet = pet
+        self._attr_location_name = pet.location
+        self._attr_last_seen = pet.last_seen
         self.async_write_ha_state()
 
     async def manual_update_location(self, location: str) -> None:
@@ -123,5 +83,6 @@ class OnlyCatPetTracker(TrackerEntity):
         if location not in (STATE_HOME, STATE_NOT_HOME):
             _LOGGER.debug("Manual update of location cannot be set to %s", location)
             return
+        self.pet.location = location
         self._attr_location_name = location
         self.async_write_ha_state()

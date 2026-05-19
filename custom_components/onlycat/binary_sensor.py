@@ -8,6 +8,7 @@ from .binary_sensor_connectivity import OnlyCatConnectionSensor
 from .binary_sensor_contraband import OnlyCatContrabandSensor
 from .binary_sensor_device_errors import OnlyCatErrorSensor
 from .binary_sensor_event import OnlyCatEventSensor
+from .binary_sensor_human import OnlyCatHumanSensor
 from .binary_sensor_lock import OnlyCatLockSensor
 
 if TYPE_CHECKING:
@@ -29,15 +30,20 @@ async def async_setup_entry(
         for sensor in (
             OnlyCatEventSensor(
                 device=device,
-                api_client=entry.runtime_data.client,
+                event_store=entry.runtime_data.event_store,
             ),
             OnlyCatContrabandSensor(
                 device=device,
-                api_client=entry.runtime_data.client,
+                event_store=entry.runtime_data.event_store,
             ),
             OnlyCatLockSensor(
                 device=device,
+                event_store=entry.runtime_data.event_store,
                 api_client=entry.runtime_data.client,
+            ),
+            OnlyCatHumanSensor(
+                device=device,
+                event_store=entry.runtime_data.event_store,
             ),
             OnlyCatConnectionSensor(
                 device=device,
@@ -50,3 +56,4 @@ async def async_setup_entry(
             ),
         )
     )
+    entry.runtime_data.coordinator.async_update_listeners()
