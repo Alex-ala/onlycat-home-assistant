@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.0.8
+### Changes
+- Make reading eventTimestamp more robust for https://github.com/OnlyCatAI/onlycat-home-assistant/issues/198
+### Update dependencies
+- Bump build and test dependencies
+- Update testing to 2026.10.1
+
 ## v2.0.7
 ### Changes
 - Use `getDeviceRebootLogs` instead of `getDeviceErrorLogs` as api changed
