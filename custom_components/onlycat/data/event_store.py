@@ -25,7 +25,7 @@ class EventStore:
         self._pet_update_listeners: dict[str, list[Callable]] = {}
         self._current_events: dict[str, Event] = {}
         self._current_summaries: dict[str, EventSummary] = {}
-        self._current_images: dict[str, bytes] = {}
+        self._current_images: dict[str, tuple[int, bytes | None]] = {}
         self._pets: dict[str, Pet] = {}
         self._api_client: OnlyCatApiClient = api_client
 
@@ -186,13 +186,13 @@ class EventStore:
             self._pet_update_listeners[rfid_code] = []
         self._pet_update_listeners[rfid_code].append(callback)
 
-    def get_current_image(self, device_id: str) -> bytes | None:
+    def get_current_image(self, device_id: str) -> tuple[int | None, bytes | None]:
         """Return cached image for given device."""
-        return self._current_images.get(device_id, None)
+        return self._current_images.get(device_id, (None, None))
 
-    def set_current_image(self, device_id: str, image: bytes) -> None:
+    def set_current_image(self, device_id: str, image: bytes, event_id: int) -> None:
         """Cache image for given device."""
-        self._current_images[device_id] = image
+        self._current_images[device_id] = (event_id, image)
 
     def get_pet_by_rfid(self, rfid_code: str) -> Pet:
         """Return pet with given RFID code, or None if not found."""

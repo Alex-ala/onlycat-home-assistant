@@ -83,8 +83,10 @@ class OnlyCatLastImage(ImageEntity):
 
     async def async_image(self) -> bytes | None:
         """Return the cached image from eventstore."""
-        image = self._event_store.get_current_image(self.device.device_id)
-        if image is None and self._current_event is not None:
+        event_id, image = self._event_store.get_current_image(self.device.device_id)
+        if self._current_event is not None and (
+            image is None or event_id != self._current_event.event_id
+        ):
             frame_to_show = (
                 self._current_event.poster_frame_index
                 if self._current_event.poster_frame_index is not None
@@ -102,7 +104,9 @@ class OnlyCatLastImage(ImageEntity):
             async with session.get(url) as resp:
                 if resp.status == HTTPStatus.OK:
                     image = await resp.read()
-                    self._event_store.set_current_image(self.device.device_id, image)
+                    self._event_store.set_current_image(
+                        self.device.device_id, image, self._current_event.event_id
+                    )
         return image
 
     async def on_event_update(self, event: Event) -> None:
