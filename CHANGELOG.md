@@ -3,6 +3,7 @@
 ## v2.0.8
 ### Changes
 - Make reading eventTimestamp more robust for https://github.com/OnlyCatAI/onlycat-home-assistant/issues/198
+- Cache camera preview and image based on event id (https://github.com/OnlyCatAI/onlycat-home-assistant/issues/211)
 ### Update dependencies
 - Bump build and test dependencies
 - Update testing to 2026.10.1
